@@ -31,10 +31,9 @@ int A::AssignStm::MaxArgs() const {
 Table *A::AssignStm::Interp(Table *t) const {
   // TODO: put your code here (lab1).
   IntAndTable *mid_res = this->exp->Interp(t);
-  if(mid_res->t == nullptr){
-    return new Table(this->id,mid_res->i,nullptr);
-  }
-  else{
+  if (mid_res->t == nullptr) {
+    return new Table(this->id, mid_res->i, nullptr);
+  } else {
     return mid_res->t->Update(this->id, mid_res->i);
   }
 }
@@ -171,12 +170,11 @@ Table *Table::Update(const std::string &key, int val) const {
 
 // a function used for debug
 void Table::Debug() const {
-  if(this->tail != nullptr){
-    std::cout << this->id << "  value : " << this->value << " " ;
-    this->tail->Debug(); 
-  }
-  else{
-    std::cout << this->id << "  value : " << this->value << " " ;
+  if (this->tail != nullptr) {
+    std::cout << this->id << "  value : " << this->value << " ";
+    this->tail->Debug();
+  } else {
+    std::cout << this->id << "  value : " << this->value << " ";
   }
   return;
 }
