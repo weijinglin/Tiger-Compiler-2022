@@ -14,6 +14,11 @@ int A::CompoundStm::MaxArgs() const {
 Table *A::CompoundStm::Interp(Table *t) const {
   // TODO: put your code here (lab1).
   Table *mid_res = this->stm1->Interp(t);
+
+  // std::cout << "Debug" << std::endl;
+  // mid_res->Debug();
+  // std::cout << std::endl;
+
   return this->stm2->Interp(mid_res);
 }
 
@@ -26,7 +31,12 @@ int A::AssignStm::MaxArgs() const {
 Table *A::AssignStm::Interp(Table *t) const {
   // TODO: put your code here (lab1).
   IntAndTable *mid_res = this->exp->Interp(t);
-  mid_res->t->Update(this->id, mid_res->i);
+  if(mid_res->t == nullptr){
+    return new Table(this->id,mid_res->i,nullptr);
+  }
+  else{
+    return mid_res->t->Update(this->id, mid_res->i);
+  }
 }
 
 int A::PrintStm::MaxArgs() const {
@@ -158,4 +168,17 @@ int Table::Lookup(const std::string &key) const {
 Table *Table::Update(const std::string &key, int val) const {
   return new Table(key, val, this);
 }
+
+// a function used for debug
+void Table::Debug() const {
+  if(this->tail != nullptr){
+    std::cout << this->id << "  value : " << this->value << " " ;
+    this->tail->Debug(); 
+  }
+  else{
+    std::cout << this->id << "  value : " << this->value << " " ;
+  }
+  return;
+}
+
 } // namespace A

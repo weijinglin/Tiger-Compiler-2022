@@ -156,6 +156,9 @@ public:
   int Lookup(const std::string &key) const;
   Table *Update(const std::string &key, int val) const;
 
+  // a function used for debug
+  void Debug() const;
+
 private:
   std::string id;
   int value;
