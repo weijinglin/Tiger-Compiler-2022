@@ -300,5 +300,6 @@ digit  [0-9]
 [ \t]+ {adjust();}
 \n {adjust(); errormsg_->Newline();}
 
+
  /* illegal input */
 . {adjust(); errormsg_->Error(errormsg_->tok_pos_, "illegal token");}
