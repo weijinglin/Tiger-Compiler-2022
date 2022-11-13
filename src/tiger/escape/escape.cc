@@ -145,6 +145,7 @@ void ForExp::Traverse(esc::EscEnvPtr env, int depth) {
   /* TODO: Put your lab5 code here */
   env->BeginScope();
   // add the readonly variable in the iteration
+  this->escape_ = false;
   env->Enter(this->var_,new esc::EscapeEntry(depth,&(this->escape_)));
 
   this->lo_->Traverse(env,depth);
@@ -198,6 +199,7 @@ void FunctionDec::Traverse(esc::EscEnvPtr env, int depth) {
     std::list<Field *> fie_list = fun->params_->GetList();
     env->BeginScope();
     for(auto fie : fie_list){
+      fie->escape_ = false;
       env->Enter(fie->name_,new esc::EscapeEntry(depth + 1,&(fie->escape_)));
     }
     fun->body_->Traverse(env,depth + 1);
@@ -208,6 +210,7 @@ void FunctionDec::Traverse(esc::EscEnvPtr env, int depth) {
 void VarDec::Traverse(esc::EscEnvPtr env, int depth) {
   /* TODO: Put your lab5 code here */
   this->init_->Traverse(env,depth);
+  this->escape_ = false;
   env->Enter(this->var_,new esc::EscapeEntry(depth,&(this->escape_)));
 }
 
