@@ -69,13 +69,20 @@ protected:
 class Access {
 public:
   /* TODO: Put your lab5 code here */
-  
+
+  virtual tree::Exp *ToExp(tree::Exp *framePtr) const = 0;
+
   virtual ~Access() = default;
   
 };
 
 class Frame {
   /* TODO: Put your lab5 code here */
+  
+  // all formals used by a function and their location is stored in the Access
+  std::list<frame::Access *> *formals_;
+
+  
 };
 
 /**

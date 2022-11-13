@@ -10,6 +10,9 @@ public:
 
   explicit InFrameAccess(int offset) : offset(offset) {}
   /* TODO: Put your lab5 code here */
+
+  tree::Exp *ToExp(tree::Exp *frame_ptr) const override;
+
 };
 
 
@@ -19,6 +22,10 @@ public:
 
   explicit InRegAccess(temp::Temp *reg) : reg(reg) {}
   /* TODO: Put your lab5 code here */
+  tree::Exp *ToExp(tree::Exp *framePtr) const override {
+    return new tree::TempExp(reg);
+  }
+
 };
 
 class X64Frame : public Frame {
