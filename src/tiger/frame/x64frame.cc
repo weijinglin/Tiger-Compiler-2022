@@ -49,6 +49,23 @@ public:
 };
 /* TODO: Put your lab5 code here */
 
+// assigned a new var
+frame::Access* X64Frame::allocLocal(bool escape){
+  // generate core access according to the escape
+  if(escape){
+    // allocate on Frame
+    frame::Access *new_access = new frame::InFrameAccess(this->frame_size);
+    // add the use of frame
+    this->frame_size += 8;
+    return new_access;
+  } else {
+    // alloc on register
+    temp::Temp* new_temp = temp::TempFactory::NewTemp();
+    frame::Access *new_access = new frame::InRegAccess(new_temp);
+    return new_access;
+  }
+}
+
 X64Frame::X64Frame(temp::Label* fun_name,std::list<bool> formals) : Frame(fun_name,formals)
 {
   // code for code generation , such as put the escape variable to the stack
