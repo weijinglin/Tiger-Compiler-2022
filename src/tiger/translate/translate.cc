@@ -123,7 +123,12 @@ tr::ExpAndTy *AbsynTree::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
 // used to compute for the static link
 tree::Exp* static_link_com(tr::Level *def_level,tr::Level *use_level){
   // it's needed only use_level is in the def_level
-  
+  // first , get the FP of the use_level
+  temp::Temp *frame_po = reg_manager->FramePointer();
+  // use the static algo
+  while(def_level != use_level){
+    // frame_po = new tree::MemExp(new tree::BinopExp(tree::BinOp::PLUS_OP,))
+  }
 }
 
 tr::ExpAndTy *SimpleVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
