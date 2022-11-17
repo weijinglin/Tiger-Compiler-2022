@@ -10,6 +10,8 @@
 #include "tiger/frame/frame.h"
 #include "tiger/semant/types.h"
 
+#include "tiger/frame/x64frame.cc"
+
 namespace tr {
 
 class Exp;
@@ -56,12 +58,52 @@ public:
   frame::Frame *frame_;
   Level *parent_;
 
+  // may be used in the static link to reduce the computation
+  int depth;
+
   /* TODO: Put your lab5 code here */
+  Level(Level* parent, frame::Frame* frame, int depth) : frame_(frame),parent_(parent),depth(depth){}
+
+  // generation a new level (used when call a new function)
+  static Level* NewLevel(Level* par_lev,temp::Label *fun_, std::list<bool> formals){
+    // push front a static link (true)
+    formals.push_front(true);
+
+    frame::Frame * new_frame = new frame::X64Frame(fun_, formals);
+    if(par_lev){
+      return new Level(par_lev,new_frame,par_lev->depth + 1);
+    } else {
+      // init for the main_level
+      return new Level(par_lev,new_frame,0);
+    }
+  }
+
+  ~Level(){
+    if(this->frame_){
+      delete frame_;
+    }
+  }
+
 };
 
 class ProgTr {
 public:
   // TODO: Put your lab5 code here */
+  ProgTr(std::unique_ptr<absyn::AbsynTree> Ast, std::unique_ptr<err::ErrorMsg> error_msg):absyn_tree_(std::move(Ast)),
+        errormsg_(std::move(error_msg)),
+        tenv_(std::make_unique<env::TEnv>()),
+        venv_(std::make_unique<env::VEnv>())
+  {
+    // init the main level , assume the default global function name is main
+    temp::Label* main_label = temp::LabelFactory::NamedLabel("main");
+    std::list<bool> formals;
+    frame::Frame* main_frame = new frame::X64Frame(main_label,formals);
+    main_level_ = std::make_unique<Level>(new tr::Level(nullptr,main_frame,0));
+
+    // do some init job
+    this->FillBaseTEnv();
+    this->FillBaseVEnv();
+  };
 
   /**
    * Translate IR tree

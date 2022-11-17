@@ -13,8 +13,12 @@ extern frame::RegManager *reg_manager;
 
 namespace tr {
 
+// may return RegisAccess and FrameAccess
 Access *Access::AllocLocal(Level *level, bool escape) {
   /* TODO: Put your lab5 code here */
+
+  frame::Access* new_access = level->frame_->allocLocal(escape);
+  return new tr::Access(level,new_access);
 }
 
 class Cx {
@@ -50,12 +54,15 @@ public:
 
   [[nodiscard]] tree::Exp *UnEx() override { 
     /* TODO: Put your lab5 code here */
+    return this->exp_;
   }
   [[nodiscard]] tree::Stm *UnNx() override {
     /* TODO: Put your lab5 code here */
+    return new tree::ExpStm(this->exp_);
   }
   [[nodiscard]] Cx UnCx(err::ErrorMsg *errormsg) override {
     /* TODO: Put your lab5 code here */
+
   }
 };
 
@@ -96,6 +103,10 @@ public:
 
 void ProgTr::Translate() {
   /* TODO: Put your lab5 code here */
+  // translate from the root
+  this->absyn_tree_.get()->Translate((this->venv_.get()),
+  (this->tenv_.get()),this->main_level_.get(),
+  this->main_level_.get()->frame_->fun_label,this->errormsg_.get());
 }
 
 } // namespace tr
@@ -106,12 +117,42 @@ tr::ExpAndTy *AbsynTree::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                    tr::Level *level, temp::Label *label,
                                    err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  return this->root_->Translate(venv,tenv,level,label,errormsg);
+}
+
+// used to compute for the static link
+tree::Exp* static_link_com(tr::Level *def_level,tr::Level *use_level){
+  // it's needed only use_level is in the def_level
+  // first , get the FP of the use_level
+  temp::Temp *frame_po = reg_manager->FramePointer();
+  // use the static algo
+  while(def_level != use_level){
+    // frame_po = new tree::MemExp(new tree::BinopExp(tree::BinOp::PLUS_OP,))
+  }
 }
 
 tr::ExpAndTy *SimpleVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                    tr::Level *level, temp::Label *label,
                                    err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  
+  // get the core var by access the venv
+  env::EnvEntry* sim_var = venv->Look(this->sym_);
+
+  // check for escape
+  if((dynamic_cast< env::VarEntry* >( sim_var )) != nullptr){
+    // check for the type
+    // get the tr::Access
+    tr::Access *sim_access = static_cast< env::VarEntry* >( sim_var )->access_;
+    if(!sim_access){
+      printf("what ? seg in SimpleVar\n");
+      return;
+    } else {
+      // compute the correct static link
+      tree::Exp *frame_po = nullptr;
+    }
+  }
+
 }
 
 tr::ExpAndTy *FieldVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
