@@ -15,6 +15,22 @@ namespace tr {
 
 Access *Access::AllocLocal(Level *level, bool escape) {
   /* TODO: Put your lab5 code here */
+
+  // generate core access according to the escape
+  if(escape){
+    // allocate on Frame
+    frame::Access *new_access = new frame::InFrameAccess(level->frame_->frame_size);
+    // add the use of frame
+    level->frame_->frame_size += 8;
+    tr::Access *res_access = new tr::Access(level,new_access);
+    return res_access;
+  } else {
+    // alloc on register
+    temp::Temp* new_temp = temp::TempFactory::NewTemp();
+    frame::Access *new_access = new frame::InRegAccess(new_temp);
+    tr::Access *res_access = new tr::Access(level,new_access);
+    return res_access;
+  }
 }
 
 class Cx {
@@ -50,12 +66,15 @@ public:
 
   [[nodiscard]] tree::Exp *UnEx() override { 
     /* TODO: Put your lab5 code here */
+    return this->exp_;
   }
   [[nodiscard]] tree::Stm *UnNx() override {
     /* TODO: Put your lab5 code here */
+    return new tree::ExpStm(this->exp_);
   }
   [[nodiscard]] Cx UnCx(err::ErrorMsg *errormsg) override {
     /* TODO: Put your lab5 code here */
+    
   }
 };
 

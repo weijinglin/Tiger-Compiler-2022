@@ -79,9 +79,31 @@ public:
 class Frame {
   /* TODO: Put your lab5 code here */
   
+public:  
   // all formals used by a function and their location is stored in the Access
   std::list<frame::Access *> *formals_;
+  // represent for the function label
+  temp::Label* fun_label;
+  // some instruction used for imple view shift
+  std::list<tree::Stm *> *view_shift;
+  // the size of frame assigned so far
+  int frame_size;
 
+  // 8 is represented for the inital 8 bytes for the return address
+  // other case such as local var and saved register is not determined
+  // this time.
+  // usage : construct a new frame
+  Frame(temp::Label* fun_name,std::list<bool> formals):frame_size(8),fun_label(fun_name)
+  {
+    // don't need to deal with the formals(because escape analysis)
+    this->formals_ = new std::list<frame::Access *>;
+  }
+
+  Frame() = default;
+
+  virtual frame::Access* allocLocal(bool escape) = 0;
+
+  ~Frame(){ delete this->formals_; }
   
 };
 
