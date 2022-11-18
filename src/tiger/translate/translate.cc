@@ -576,7 +576,7 @@ tr::ExpAndTy *SeqExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   // TODO(wjl) : parse all Exp but only the last one will return(may be a bug) and type is the same as the last one ,that would be buggy too!!
   for(auto exp : exp_list){
     res_list.push_back(exp->Translate(venv,tenv,level,label,errormsg));
-  } 
+  }
   return new tr::ExpAndTy(new tr::ExExp(res_list.back()->exp_->UnEx()),res_list.back()->ty_);
 }
 
@@ -596,7 +596,70 @@ tr::ExpAndTy *IfExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                tr::Level *level, temp::Label *label,
                                err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
-  
+  tr::ExpAndTy* test_ = this->test_->Translate(venv,tenv,level,label,errormsg);
+
+  temp::Label* _true = temp::LabelFactory::NewLabel();
+  temp::Label* _false = temp::LabelFactory::NewLabel();
+
+  temp::Label* joint_ = temp::LabelFactory::NewLabel();
+
+  temp::Temp* res = temp::TempFactory::NewTemp();
+
+  // build the true branch
+  tr::ExpAndTy* true_exp = this->then_->Translate(venv,tenv,level,label,errormsg);
+  tree::MoveStm* true_mov = new tree::MoveStm(new tree::TempExp(res),true_exp->exp_->UnEx());
+
+  // build the false branch
+  tree::Stm* all_;
+  if(this->elsee_){
+    tr::ExpAndTy* false_exp = this->elsee_->Translate(venv,tenv,level,label,errormsg);
+    tree::MoveStm* false_mov = new tree::MoveStm(new tree::TempExp(res),false_exp->exp_->UnEx());
+    all_ = new tree::SeqStm(
+      test_->exp_->UnCx(errormsg).stm_,
+      new tree::SeqStm(
+        new tree::LabelStm(_true),
+        new tree::SeqStm(
+          true_mov,
+          new tree::SeqStm(
+            new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
+            new tree::SeqStm(
+              new tree::LabelStm(_false),
+              new tree::SeqStm(
+                false_mov,
+                new tree::SeqStm(
+                  new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
+                  new tree::LabelStm(joint_)
+                )
+              )
+            )
+          )
+        )
+      ));
+  } else {
+    // TODO(wjl) : here may be too redundancy
+    all_ = new tree::SeqStm(
+      test_->exp_->UnCx(errormsg).stm_,
+      new tree::SeqStm(
+        new tree::LabelStm(_true),
+        new tree::SeqStm(
+          true_mov,
+          new tree::SeqStm(
+            new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
+            new tree::SeqStm(
+              new tree::LabelStm(_false),
+              new tree::SeqStm(
+                  new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
+                  new tree::LabelStm(joint_)
+                )
+          )
+      )
+    )));
+  }
+
+  return new tr::ExpAndTy(new tr::ExExp(new tree::EseqExp(
+    all_,new tree::TempExp(res)
+  )),true_exp->ty_);
+
 }
 
 tr::ExpAndTy *WhileExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
