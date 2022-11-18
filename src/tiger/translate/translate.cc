@@ -571,19 +571,32 @@ tr::ExpAndTy *SeqExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                 tr::Level *level, temp::Label *label,
                                 err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
-  
+  std::list<Exp *> exp_list = this->seq_->GetList();
+  std::list<tr::ExpAndTy*> res_list;
+  // TODO(wjl) : parse all Exp but only the last one will return(may be a bug) and type is the same as the last one ,that would be buggy too!!
+  for(auto exp : exp_list){
+    res_list.push_back(exp->Translate(venv,tenv,level,label,errormsg));
+  } 
+  return new tr::ExpAndTy(new tr::ExExp(res_list.back()->exp_->UnEx()),res_list.back()->ty_);
 }
 
 tr::ExpAndTy *AssignExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                    tr::Level *level, temp::Label *label,                       
                                    err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  // TODO(wjl) : how to deal with assign's not return value ?
+  tr::ExpAndTy* left_val = this->var_->Translate(venv,tenv,level,label,errormsg);
+  tr::ExpAndTy* rig_val = this->exp_->Translate(venv,tenv,level,label,errormsg);
+
+  tree::Stm* mov_stm = new tree::MoveStm(left_val->exp_->UnEx(),rig_val->exp_->UnEx());
+  return new tr::ExpAndTy(new tr::NxExp(mov_stm),type::VoidTy::Instance());
 }
 
 tr::ExpAndTy *IfExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                tr::Level *level, temp::Label *label,
                                err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  
 }
 
 tr::ExpAndTy *WhileExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
