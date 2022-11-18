@@ -265,30 +265,70 @@ tr::ExpAndTy *VarExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                 tr::Level *level, temp::Label *label,
                                 err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  return this->var_->Translate(venv,tenv,level,label,errormsg);
 }
 
 tr::ExpAndTy *NilExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                 tr::Level *level, temp::Label *label,
                                 err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  // TODO(wjl): left Exp* nullptr may be buggy
+  return new tr::ExpAndTy(nullptr,type::NilTy::Instance());
 }
 
 tr::ExpAndTy *IntExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                 tr::Level *level, temp::Label *label,
                                 err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  return new tr::ExpAndTy(new tr::ExExp(new tree::ConstExp(this->val_)),type::IntTy::Instance());
 }
 
 tr::ExpAndTy *StringExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                    tr::Level *level, temp::Label *label,
                                    err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  // TODO(wjl): deal with a string_Frag , but the instr is not care here
+  temp::Label *str_label = temp::LabelFactory::NewLabel();
+  frags->PushBack(new frame::StringFrag(str_label,this->str_));
+  return new tr::ExpAndTy(new tr::ExExp(new tree::NameExp(str_label)),type::StringTy::Instance());
 }
 
 tr::ExpAndTy *CallExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                  tr::Level *level, temp::Label *label,
                                  err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  // need to push the static link to the first formals
+  tree::Exp* fun_name = new tree::NameExp(this->func_);
+  tree::ExpList* args = new tree::ExpList();
+  if(label == this->func_){
+    // transfer static link
+    frame::Access* static_acc = level->frame_->formals_->front();
+    tree::Exp* static_exp = static_acc->ToExp(new tree::TempExp(reg_manager->FramePointer()));
+    args->Append(static_exp);
+    for(auto arg : this->args_->GetList()){
+      tr::ExpAndTy* mid_res = arg->Translate(venv,tenv,level,label,errormsg);
+      args->Append(mid_res->exp_->UnEx());
+    }
+  } else {
+    // transfer the frame pointer
+    tree::Exp* static_exp = new tree::TempExp(reg_manager->FramePointer());
+    args->Append(static_exp);
+    for(auto arg : this->args_->GetList()){
+      tr::ExpAndTy* mid_res = arg->Translate(venv,tenv,level,label,errormsg);
+      args->Append(mid_res->exp_->UnEx());
+    }
+  }
+
+  // get the function return type
+  env::EnvEntry *fun_entry = venv->Look(this->func_);
+  type::Ty* last_ty;
+  if(dynamic_cast<env::FunEntry*>(fun_entry) != nullptr){
+    last_ty = static_cast<env::FunEntry*>(fun_entry)->result_;
+  } else {
+    printf("what ? type of function not match ?\n");
+  }
+
+  return new tr::ExpAndTy(new tr::ExExp(new tree::CallExp(fun_name,args)),last_ty);
 }
 
 tr::ExpAndTy *OpExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
