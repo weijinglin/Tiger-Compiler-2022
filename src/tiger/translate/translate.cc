@@ -199,6 +199,37 @@ tr::ExpAndTy *FieldVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                   tr::Level *level, temp::Label *label,
                                   err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  // get the core var by access the venv
+  tr::ExpAndTy* mid_res = this->var_->Translate(venv,tenv,level,label,errormsg);
+  // use type to compute the offset of each field
+  type::Ty* record_ty = mid_res->ty_;
+  // TODO(wjl): there may be buggy because of the type convert
+  type::RecordTy* con_record_ty = static_cast<type::RecordTy*>(record_ty);
+  std::list<type::Field *> fie_list = con_record_ty->fields_->GetList();
+  int counter = 1;
+  bool is_find = false;
+  type::Ty* last_ty;
+  for(auto fie : fie_list){
+    if(fie->name_ == this->sym_){
+      is_find = true;
+      last_ty = fie->ty_;
+      break;
+    }
+    counter++;
+  }
+  
+  if(!is_find){
+    printf("what , field not find ?\n");
+  }
+
+  // construct the offset
+  tree::BinopExp *rec_off = new tree::BinopExp(tree::BinOp::MUL_OP,new tree::ConstExp(counter),new tree::ConstExp(reg_manager->WordSize()));
+  // construct the base
+  tree::MemExp *base_ = new tree::MemExp(mid_res->exp_->UnEx());
+
+  tree::MemExp* last_ = new tree::MemExp(new tree::BinopExp(tree::BinOp::PLUS_OP, base_, rec_off));
+
+  return new tr::ExpAndTy(new tr::ExExp(last_),last_ty);
 
 }
 
