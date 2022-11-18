@@ -129,6 +129,7 @@ private:
   // Fill base symbol for var env and type env
   void FillBaseVEnv();
   void FillBaseTEnv();
+
 };
 
 } // namespace tr

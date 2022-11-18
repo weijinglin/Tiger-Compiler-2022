@@ -62,7 +62,9 @@ public:
   }
   [[nodiscard]] Cx UnCx(err::ErrorMsg *errormsg) override {
     /* TODO: Put your lab5 code here */
-
+    tr::PatchList *trues = new tr::PatchList();
+    tr::PatchList *falses = new tr::PatchList();
+    Cx* res =  new tr::Cx(*trues,*falses,this->UnNx());
   }
 };
 
@@ -74,12 +76,15 @@ public:
 
   [[nodiscard]] tree::Exp *UnEx() override {
     /* TODO: Put your lab5 code here */
+    return new tree::EseqExp(this->stm_,new tree::ConstExp(0));
   }
   [[nodiscard]] tree::Stm *UnNx() override { 
     /* TODO: Put your lab5 code here */
+    return this->stm_;
   }
   [[nodiscard]] Cx UnCx(err::ErrorMsg *errormsg) override {
     /* TODO: Put your lab5 code here */
+    errormsg->Error(errormsg->GetTokPos(),"there should not be the kind of convert\n");
   }
 };
 
@@ -92,12 +97,31 @@ public:
   
   [[nodiscard]] tree::Exp *UnEx() override {
     /* TODO: Put your lab5 code here */
+    temp::Temp *r = temp::TempFactory::NewTemp();
+    temp::Label *true_label = temp::LabelFactory::NewLabel();
+    temp::Label *false_label = temp::LabelFactory::NewLabel();
+    this->cx_.trues_.DoPatch(true_label);
+    this->cx_.falses_.DoPatch(false_label);
+
+    // attention : TempExp represent for the value of the register
+    tree::Stm* ass_res = new tree::MoveStm(new tree::TempExp(r),new tree::ConstExp(1));
+
+    return new tree::EseqExp(ass_res,new tree::EseqExp(
+      this->cx_.stm_,new tree::EseqExp(
+        new tree::LabelStm(false_label),new tree::EseqExp(
+          new tree::MoveStm(new tree::TempExp(r),new tree::ConstExp(0)),
+          new tree::EseqExp(new tree::LabelStm(true_label),new tree::TempExp(r))
+        )
+      )
+    ));
   }
   [[nodiscard]] tree::Stm *UnNx() override {
     /* TODO: Put your lab5 code here */
+    return this->cx_.stm_;
   }
   [[nodiscard]] Cx UnCx(err::ErrorMsg *errormsg) override { 
     /* TODO: Put your lab5 code here */
+    return this->cx_;
   }
 };
 
@@ -117,7 +141,8 @@ tr::ExpAndTy *AbsynTree::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                    tr::Level *level, temp::Label *label,
                                    err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
-  return this->root_->Translate(venv,tenv,level,label,errormsg);
+  tr::ExpAndTy* res =  this->root_->Translate(venv,tenv,level,label,errormsg);
+  frags->PushBack(new frame::ProcFrag(res->exp_->UnNx(),level->frame_));
 }
 
 // used to compute for the static link
@@ -125,10 +150,24 @@ tree::Exp* static_link_com(tr::Level *def_level,tr::Level *use_level){
   // it's needed only use_level is in the def_level
   // first , get the FP of the use_level
   temp::Temp *frame_po = reg_manager->FramePointer();
-  // use the static algo
-  while(def_level != use_level){
-    // frame_po = new tree::MemExp(new tree::BinopExp(tree::BinOp::PLUS_OP,))
+  if(def_level == use_level){
+    return new tree::TempExp(frame_po);
   }
+  // use the static algo
+  // get the first FP to make the iteration can loop
+  tree::Exp* iter = new tree::TempExp(frame_po);
+  tr::Level* now_level = use_level;
+  while(def_level != now_level){
+    // TODO : there may be some error because of the frame_size is known , so is it necessary to store the fp of last level ?
+    // here we store the fp of last level
+    // can use the offset in the Access if thee fpp is stored in the formal
+    iter = use_level->frame_->formals_->front()->ToExp(iter);
+    if(!now_level){
+      printf("what ? seg in static link\n");
+    }
+    now_level = now_level->parent_;
+  }
+  return iter;
 }
 
 tr::ExpAndTy *SimpleVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
@@ -149,7 +188,8 @@ tr::ExpAndTy *SimpleVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
       return;
     } else {
       // compute the correct static link
-      tree::Exp *frame_po = nullptr;
+      tree::Exp *static_link = static_link_com(sim_access->level_,level);
+      return new tr::ExpAndTy(new tr::ExExp(sim_access->access_->ToExp(static_link)),static_cast< env::VarEntry* >( sim_var )->ty_);
     }
   }
 
@@ -159,12 +199,35 @@ tr::ExpAndTy *FieldVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                   tr::Level *level, temp::Label *label,
                                   err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+
 }
 
 tr::ExpAndTy *SubscriptVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                       tr::Level *level, temp::Label *label,
                                       err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  // get the core var by access the venv
+  tr::ExpAndTy* mid_res = this->var_->Translate(venv,tenv,level,label,errormsg);
+  // parse the sub
+  tr::ExpAndTy* sub_res = this->subscript_->Translate(venv,tenv,level,label,errormsg);
+  tr::ExExp* e;
+  if(dynamic_cast<tr::ExExp*>(mid_res->exp_) == nullptr){
+    // check for type
+    printf("in sub exist type not expected\n");
+  }
+  e = new tr::ExExp(mid_res->exp_->UnEx());
+
+  tree::MemExp* arr_fir = new tree::MemExp(e->exp_);
+  tree::BinopExp* arr_off = new tree::BinopExp(tree::BinOp::MUL_OP, sub_res->exp_->UnEx(), new tree::ConstExp(reg_manager->WordSize()));
+  tree::MemExp* last_res = new tree::MemExp(new tree::BinopExp(
+    tree::BinOp::PLUS_OP,arr_fir,arr_off
+  ));
+
+  // TODO(wjl): there may be buggy because of the type convert
+  type::Ty* last_ty = static_cast<type::ArrayTy *>(mid_res->ty_)->ty_;
+
+  return new tr::ExpAndTy(new tr::ExExp(last_res),last_ty);
+
 }
 
 tr::ExpAndTy *VarExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
