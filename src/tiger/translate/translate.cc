@@ -128,9 +128,11 @@ public:
 void ProgTr::Translate() {
   /* TODO: Put your lab5 code here */
   // translate from the root
-  this->absyn_tree_.get()->Translate((this->venv_.get()),
+  tr::ExpAndTy* res =  this->absyn_tree_.get()->Translate((this->venv_.get()),
   (this->tenv_.get()),this->main_level_.get(),
   this->main_level_.get()->frame_->fun_label,this->errormsg_.get());
+
+  frags->PushBack(new frame::ProcFrag(res->exp_->UnNx(),this->main_level_.get()->frame_));
 }
 
 } // namespace tr
@@ -142,7 +144,7 @@ tr::ExpAndTy *AbsynTree::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                    err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
   tr::ExpAndTy* res =  this->root_->Translate(venv,tenv,level,label,errormsg);
-  frags->PushBack(new frame::ProcFrag(res->exp_->UnNx(),level->frame_));
+  return res;
 }
 
 // used to compute for the static link
@@ -335,12 +337,182 @@ tr::ExpAndTy *OpExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                tr::Level *level, temp::Label *label,
                                err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  tr::ExpAndTy* left_res = this->left_->Translate(venv,tenv,level,label,errormsg);
+  tr::ExpAndTy* right_res = this->right_->Translate(venv,tenv,level,label,errormsg);
+  switch (this->oper_)
+  {
+  case absyn::Oper::PLUS_OP:
+    /* code */
+    // TODO(wjl): assume only int can operate on plus , minus , times and so on
+    return new tr::ExpAndTy(
+      new tr::ExExp(
+        new tree::BinopExp(tree::BinOp::PLUS_OP,left_res->exp_->UnEx(),right_res->exp_->UnEx()))
+        ,type::IntTy::Instance());
+    break;
+  case absyn::Oper::MINUS_OP:
+    return new tr::ExpAndTy(
+      new tr::ExExp(
+        new tree::BinopExp(tree::BinOp::MINUS_OP,left_res->exp_->UnEx(),right_res->exp_->UnEx()))
+        ,type::IntTy::Instance());
+    break;
+  case absyn::Oper::TIMES_OP:
+    return new tr::ExpAndTy(
+      new tr::ExExp(
+        new tree::BinopExp(tree::BinOp::MUL_OP,left_res->exp_->UnEx(),right_res->exp_->UnEx()))
+        ,type::IntTy::Instance());
+    break;
+  case absyn::Oper::DIVIDE_OP:
+    return new tr::ExpAndTy(
+      new tr::ExExp(
+        new tree::BinopExp(tree::BinOp::DIV_OP,left_res->exp_->UnEx(),right_res->exp_->UnEx()))
+        ,type::IntTy::Instance());
+    break;
+
+  case absyn::Oper::AND_OP:
+  {
+    // TODO(wjl) : parse the op of || and && as a CxExp(may be wrong)
+    // implement the short execv
+    temp::Label* mid_pos = temp::LabelFactory::NewLabel();
+    // std::list<temp::Label **> pat_trues;
+    // std::list<temp::Label **> pat_falses;
+    // pat_trues.push_back(&(static_cast<tree::CjumpStm*>(right_res->exp_->UnCx(errormsg).stm_)->true_label_));
+    // pat_falses.push_back(&(static_cast<tree::CjumpStm*>(left_res->exp_->UnCx(errormsg).stm_)->false_label_));
+    // pat_falses.push_back(&(static_cast<tree::CjumpStm*>(right_res->exp_->UnCx(errormsg).stm_)->false_label_));
+    // TODO(wjl) : may be buggy because of the type convert
+    // static_cast<tree::CjumpStm*>(left_res->exp_->UnCx(errormsg).stm_)->true_label_ = mid_pos;
+    left_res->exp_->UnCx(errormsg).trues_.DoPatch(mid_pos);
+    tree::Stm* res = new tree::SeqStm(left_res->exp_->UnCx(errormsg).stm_,
+    new tree::SeqStm(new tree::LabelStm(mid_pos),right_res->exp_->UnCx(errormsg).stm_));
+    tr::PatchList trues = tr::PatchList::JoinPatch(tr::PatchList() ,right_res->exp_->UnCx(errormsg).trues_);
+    // tr::PatchList* falses = new tr::PatchList(pat_falses);
+    tr::PatchList falses = tr::PatchList::JoinPatch(left_res->exp_->UnCx(errormsg).falses_,right_res->exp_->UnCx(errormsg).falses_);
+    // TODO(wjl) : may be buggy because of the type (not sure for int)
+    return new tr::ExpAndTy(
+      new tr::CxExp(trues,falses,res),type::IntTy::Instance()
+    );
+    break;
+  }
+  case absyn::Oper::OR_OP:
+  {
+    // TODO(wjl) : parse the op of || and && as a CxExp(may be wrong)
+    // implement the short execv
+    temp::Label* mid_pos = temp::LabelFactory::NewLabel();
+    // std::list<temp::Label **> pat_trues;
+    // std::list<temp::Label **> pat_falses;
+    // pat_trues.push_back(&(static_cast<tree::CjumpStm*>(right_res->exp_->UnCx(errormsg).stm_)->true_label_));
+    // pat_falses.push_back(&(static_cast<tree::CjumpStm*>(left_res->exp_->UnCx(errormsg).stm_)->false_label_));
+    // pat_falses.push_back(&(static_cast<tree::CjumpStm*>(right_res->exp_->UnCx(errormsg).stm_)->false_label_));
+    // TODO(wjl) : may be buggy because of the type convert
+    // static_cast<tree::CjumpStm*>(left_res->exp_->UnCx(errormsg).stm_)->true_label_ = mid_pos;
+    left_res->exp_->UnCx(errormsg).falses_.DoPatch(mid_pos);
+    tree::Stm* res = new tree::SeqStm(left_res->exp_->UnCx(errormsg).stm_,
+    new tree::SeqStm(new tree::LabelStm(mid_pos),right_res->exp_->UnCx(errormsg).stm_));
+    tr::PatchList trues = tr::PatchList::JoinPatch(left_res->exp_->UnCx(errormsg).trues_ ,right_res->exp_->UnCx(errormsg).trues_);
+    // tr::PatchList* falses = new tr::PatchList(pat_falses);
+    tr::PatchList falses = tr::PatchList::JoinPatch(tr::PatchList(), right_res->exp_->UnCx(errormsg).falses_);
+    // TODO(wjl) : may be buggy because of the type (not sure for int)
+    return new tr::ExpAndTy(
+      new tr::CxExp(trues,falses,res),type::IntTy::Instance()
+    );
+    break;
+  }
+  
+  case absyn::Oper::EQ_OP:
+  {
+    // TODO(wjl) : left true_label and false_label empty (may be buggy)
+    tree::Stm* last_ = new tree::CjumpStm(tree::RelOp::EQ_OP,
+    left_res->exp_->UnEx(),right_res->exp_->UnEx(),nullptr,nullptr);
+    std::list<temp::Label **> pat_trues;
+    std::list<temp::Label **> pat_falses;
+    pat_trues.push_back(&(static_cast<tree::CjumpStm*>(last_)->true_label_));
+    pat_falses.push_back(&(static_cast<tree::CjumpStm*>(last_)->false_label_));
+    tr::PatchList *trues = new tr::PatchList(pat_trues);
+    tr::PatchList *falses = new tr::PatchList(pat_falses);
+    return new tr::ExpAndTy(new tr::CxExp(*trues,*falses,last_),type::IntTy::Instance());
+    break;
+  } 
+  case absyn::Oper::GE_OP:
+  {
+    // TODO(wjl) : left true_label and false_label empty (may be buggy)
+    tree::Stm* last_ = new tree::CjumpStm(tree::RelOp::GE_OP,
+    left_res->exp_->UnEx(),right_res->exp_->UnEx(),nullptr,nullptr);
+    std::list<temp::Label **> pat_trues;
+    std::list<temp::Label **> pat_falses;
+    pat_trues.push_back(&(static_cast<tree::CjumpStm*>(last_)->true_label_));
+    pat_falses.push_back(&(static_cast<tree::CjumpStm*>(last_)->false_label_));
+    tr::PatchList *trues = new tr::PatchList(pat_trues);
+    tr::PatchList *falses = new tr::PatchList(pat_falses);
+    return new tr::ExpAndTy(new tr::CxExp(*trues,*falses,last_),type::IntTy::Instance());
+    break;
+  } 
+  case absyn::Oper::LE_OP:
+  {
+    // TODO(wjl) : left true_label and false_label empty (may be buggy)
+    tree::Stm* last_ = new tree::CjumpStm(tree::RelOp::LE_OP,
+    left_res->exp_->UnEx(),right_res->exp_->UnEx(),nullptr,nullptr);
+    std::list<temp::Label **> pat_trues;
+    std::list<temp::Label **> pat_falses;
+    pat_trues.push_back(&(static_cast<tree::CjumpStm*>(last_)->true_label_));
+    pat_falses.push_back(&(static_cast<tree::CjumpStm*>(last_)->false_label_));
+    tr::PatchList *trues = new tr::PatchList(pat_trues);
+    tr::PatchList *falses = new tr::PatchList(pat_falses);
+    return new tr::ExpAndTy(new tr::CxExp(*trues,*falses,last_),type::IntTy::Instance());
+    break;
+  } 
+  case absyn::Oper::GT_OP:
+  {
+    // TODO(wjl) : left true_label and false_label empty (may be buggy)
+    tree::Stm* last_ = new tree::CjumpStm(tree::RelOp::GT_OP,
+    left_res->exp_->UnEx(),right_res->exp_->UnEx(),nullptr,nullptr);
+    std::list<temp::Label **> pat_trues;
+    std::list<temp::Label **> pat_falses;
+    pat_trues.push_back(&(static_cast<tree::CjumpStm*>(last_)->true_label_));
+    pat_falses.push_back(&(static_cast<tree::CjumpStm*>(last_)->false_label_));
+    tr::PatchList *trues = new tr::PatchList(pat_trues);
+    tr::PatchList *falses = new tr::PatchList(pat_falses);
+    return new tr::ExpAndTy(new tr::CxExp(*trues,*falses,last_),type::IntTy::Instance());
+    break;
+  } 
+  case absyn::Oper::LT_OP:
+  {
+    // TODO(wjl) : left true_label and false_label empty (may be buggy)
+    tree::Stm* last_ = new tree::CjumpStm(tree::RelOp::LT_OP,
+    left_res->exp_->UnEx(),right_res->exp_->UnEx(),nullptr,nullptr);
+    std::list<temp::Label **> pat_trues;
+    std::list<temp::Label **> pat_falses;
+    pat_trues.push_back(&(static_cast<tree::CjumpStm*>(last_)->true_label_));
+    pat_falses.push_back(&(static_cast<tree::CjumpStm*>(last_)->false_label_));
+    tr::PatchList *trues = new tr::PatchList(pat_trues);
+    tr::PatchList *falses = new tr::PatchList(pat_falses);
+    return new tr::ExpAndTy(new tr::CxExp(*trues,*falses,last_),type::IntTy::Instance());
+    break;
+  } 
+  case absyn::Oper::NEQ_OP:
+ {
+    // TODO(wjl) : left true_label and false_label empty (may be buggy)
+    tree::Stm* last_ = new tree::CjumpStm(tree::RelOp::NE_OP,
+    left_res->exp_->UnEx(),right_res->exp_->UnEx(),nullptr,nullptr);
+    std::list<temp::Label **> pat_trues;
+    std::list<temp::Label **> pat_falses;
+    pat_trues.push_back(&(static_cast<tree::CjumpStm*>(last_)->true_label_));
+    pat_falses.push_back(&(static_cast<tree::CjumpStm*>(last_)->false_label_));
+    tr::PatchList *trues = new tr::PatchList(pat_trues);
+    tr::PatchList *falses = new tr::PatchList(pat_falses);
+    return new tr::ExpAndTy(new tr::CxExp(*trues,*falses,last_),type::IntTy::Instance());
+    break;
+  } 
+  default:
+    printf("don't take care of all case in OpExp\n");
+    break;
+  }
+
 }
 
 tr::ExpAndTy *RecordExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                    tr::Level *level, temp::Label *label,      
                                    err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  
 }
 
 tr::ExpAndTy *SeqExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
