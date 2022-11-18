@@ -666,6 +666,43 @@ tr::ExpAndTy *WhileExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                   tr::Level *level, temp::Label *label,            
                                   err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  temp::Label* begin_ = temp::LabelFactory::NewLabel();
+  temp::Label* done_ = temp::LabelFactory::NewLabel();
+  temp::Label* true_ = temp::LabelFactory::NewLabel();
+  temp::Label* false_ = temp::LabelFactory::NewLabel();
+  tr::ExpAndTy* _test = this->test_->Translate(venv,tenv,level,label,errormsg);
+  _test->exp_->UnCx(errormsg).falses_.DoPatch(false_);
+  _test->exp_->UnCx(errormsg).trues_.DoPatch(true_);
+  tree::Stm* while_stm = new tree::SeqStm(
+    new tree::LabelStm(begin_),
+    new tree::SeqStm(
+      _test->exp_->UnCx(errormsg).stm_,
+      new tree::SeqStm(
+        new tree::LabelStm(false_),
+        new tree::SeqStm(
+          new tree::JumpStm(
+            new tree::NameExp(done_),
+            new std::vector<temp::Label*>({done_})
+          ),
+          new tree::SeqStm(
+            new tree::LabelStm(true_),
+            new tree::SeqStm(
+              this->body_->Translate(venv,tenv,level,done_,errormsg)->exp_->UnNx(),
+              new tree::SeqStm(
+                new tree::JumpStm(
+                  new tree::NameExp(begin_),
+                  new std::vector<temp::Label*>({begin_})
+                ),
+                new tree::LabelStm(done_)
+              )
+            )
+          )
+        )
+      )
+    )
+  );
+
+  return new tr::ExpAndTy(new tr::NxExp(while_stm),type::VoidTy::Instance());
 }
 
 tr::ExpAndTy *ForExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
