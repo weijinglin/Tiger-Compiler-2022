@@ -512,13 +512,66 @@ tr::ExpAndTy *RecordExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                    tr::Level *level, temp::Label *label,      
                                    err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
-  
+  std::list<absyn::EField*> eFie_list = this->fields_->GetList();
+  std::list<tr::ExpAndTy*> *exp_list = new std::list<tr::ExpAndTy*>();
+  for(auto efie : eFie_list){
+    exp_list->push_back(efie->exp_->Translate(venv,tenv,level,label,errormsg));
+  }
+
+  // call the external function
+  // first , prepare for the params
+  int counter = exp_list->size();
+  tree::ConstExp* _size = new tree::ConstExp(counter);
+
+  // TODO(wjl) : may be buggy (external call)
+  tree::Exp* _call = frame::externalCall("alloc_record",new tree::ExpList({_size}));
+
+  // store the Record address and act as the result of this exp
+  temp::Temp *res = temp::TempFactory::NewTemp();
+  tree::Stm* ini_stm = new tree::MoveStm(new tree::TempExp(res),_call);
+
+  // do the init job in a loop
+  // TODO(wjl) : maybe buggy : too conflict
+  int idx = 0;
+  std::list<tree::Stm*> move_list;
+  for(auto exp : *exp_list){
+    tree::MoveStm *mov_stm = new tree::MoveStm(new tree::MemExp(new tree::BinopExp(tree::BinOp::PLUS_OP,new tree::TempExp(res)
+    ,new tree::ConstExp(idx * reg_manager->WordSize())))
+    ,exp->exp_->UnEx());
+    idx++;
+    move_list.push_back(mov_stm);
+  }
+
+  // build the result
+  tree::Stm* pro_stm = move_list.back();
+  int loop_time = 0;
+  auto iter = move_list.end();
+  iter--;
+  iter--;
+  for(;;--iter){
+    pro_stm = new tree::SeqStm(*(iter),pro_stm);
+    loop_time++;
+    if(loop_time + 1 == move_list.size()){
+      if(iter != move_list.begin()){
+        printf("count err\n");
+      }
+      break;
+    }
+  }
+
+  pro_stm = new tree::SeqStm(ini_stm,pro_stm);
+  tree::Exp* last_ = new tree::EseqExp(pro_stm,new tree::TempExp(res));
+
+  type::Ty* res_ty = tenv->Look(this->typ_);
+
+  return new tr::ExpAndTy(new tr::ExExp(last_),res_ty);
 }
 
 tr::ExpAndTy *SeqExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                 tr::Level *level, temp::Label *label,
                                 err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  
 }
 
 tr::ExpAndTy *AssignExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,

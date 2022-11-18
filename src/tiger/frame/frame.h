@@ -161,6 +161,10 @@ private:
 };
 
 /* TODO: Put your lab5 code here */
+tree::Exp* externalCall(std::string_view s, tree::ExpList *args){
+  // TODO(wjl) : there don't do any deal with
+  return new tree::CallExp(new tree::NameExp(temp::LabelFactory::NamedLabel(s)),args);
+}
 
 } // namespace frame
 
