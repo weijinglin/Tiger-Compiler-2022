@@ -846,6 +846,21 @@ tr::ExpAndTy *ArrayExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                   tr::Level *level, temp::Label *label,                    
                                   err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  // prepare for malloc size
+  tree::Exp* _size = this->size_->Translate(venv,tenv,level,label,errormsg)->exp_->UnEx();
+  tree::Exp* _init = this->init_->Translate(venv,tenv,level,label,errormsg)->exp_->UnEx();
+
+  tree::Exp* _call = frame::externalCall("init_array",new tree::ExpList({_size,_init}));
+
+  // build the Temp to store the last return value
+  temp::Temp *ans = temp::TempFactory::NewTemp();
+
+  tree::Stm* move_stm = new tree::MoveStm(new tree::TempExp(ans),_call);
+
+  // TODO(wjl) : array type or one primitive type
+  type::Ty* res_ty = tenv->Look(this->typ_);
+
+  return new tr::ExpAndTy(new tr::ExExp(new tree::EseqExp(move_stm,new tree::TempExp(ans))),res_ty);
 }
 
 tr::ExpAndTy *VoidExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
