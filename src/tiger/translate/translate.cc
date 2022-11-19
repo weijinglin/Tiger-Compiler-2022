@@ -875,6 +875,66 @@ tr::Exp *FunctionDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                 tr::Level *level, temp::Label *label,
                                 err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  // parse the label of the function first
+  std::list<tree::LabelStm*> all_lab; 
+  for(auto fun_dec : this->functions_->GetList()){
+    // construct the function Label
+    temp::Label* fun_label = temp::LabelFactory::NamedLabel(fun_dec->name_->Name());
+    all_lab.push_back(new tree::LabelStm(fun_label));
+    
+    // change the venv
+    std::list<absyn::Field *> fie_list = fun_dec->params_->GetList();
+    type::TyList* ty_list = new type::TyList();
+    for(auto fie : fie_list){
+      type::Ty* a_ty = tenv->Look(fie->typ_);
+      ty_list->Append(a_ty);
+    }
+
+    // construct the escape list
+    std::list<bool> _escape;
+
+    for(auto fie : fie_list){
+      _escape.push_back(fie->escape_);
+    }
+
+    tr::Level* new_level = tr::Level::NewLevel(level,fun_label,_escape);
+
+    type::Ty* re_ty = tenv->Look(fun_dec->result_);
+    env::FunEntry* new_fun = new env::FunEntry(new_level, fun_label, ty_list, re_ty);
+
+    venv->Enter(fun_dec->name_,new_fun);
+  }
+
+  // parse the function body
+  // prologue and epilogue is not care in translate stage
+  for(auto fun_bo : this->functions_->GetList()){
+    // prepare for the params of a function
+    std::list<absyn::Field*> fie_list = fun_bo->params_->GetList();
+    auto iter = fie_list.begin();
+    // skip static link
+    iter++;
+
+    venv->BeginScope();
+
+    for(;iter != fie_list.end();++iter){
+      venv->Enter((*iter)->name_, new env::VarEntry(tenv->Look((*iter)->typ_)->ActualTy(),false));
+    }
+
+    // get the core fun entry
+    env::EnvEntry* _fun = venv->Look(fun_bo->name_);
+
+    // translate body
+    tr::ExpAndTy* fun_res = fun_bo->body_->Translate(venv,tenv,static_cast<env::FunEntry*>(_fun)->level_,static_cast<env::FunEntry*>(_fun)->label_,errormsg);
+    tree::Stm* mov_stm = new tree::MoveStm(new tree::TempExp(reg_manager->ReturnValue()),fun_res->exp_->UnEx());
+
+    tree::Stm* all_stm = frame::procEntryExit1(static_cast<env::FunEntry*>(_fun)->level_->frame_,mov_stm);
+
+    frame::ProcFrag* _frag = new frame::ProcFrag(all_stm,static_cast<env::FunEntry*>(_fun)->level_->frame_);
+    frags->PushBack(_frag);
+    venv->EndScope();
+  }
+
+  return new tr::ExExp(new tree::ConstExp(0));
 }
 
 tr::Exp *VarDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,

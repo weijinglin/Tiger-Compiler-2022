@@ -166,6 +166,23 @@ tree::Exp* externalCall(std::string_view s, tree::ExpList *args){
   return new tree::CallExp(new tree::NameExp(temp::LabelFactory::NamedLabel(s)),args);
 }
 
+tree::Stm* procEntryExit1(frame::Frame *frame, tree::Stm* stm){
+  // concat the view shift code with the given code
+  auto iter = frame->view_shift->end();
+  --iter;
+  tree::Stm* new_stm = (*iter);
+  --iter;
+  // do concat job
+}
+
+assem::InstrList* procEntryExit2(assem::InstrList* body){
+
+}
+
+assem::Proc* procEntryExit3(frame::Frame *frame, assem::InstrList *body){
+
+}
+
 } // namespace frame
 
 #endif
