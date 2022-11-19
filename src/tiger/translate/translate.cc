@@ -666,6 +666,7 @@ tr::ExpAndTy *WhileExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                   tr::Level *level, temp::Label *label,            
                                   err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  // TODO(wjl) : maybe buggy because of adding label (different with PPT)
   temp::Label* begin_ = temp::LabelFactory::NewLabel();
   temp::Label* done_ = temp::LabelFactory::NewLabel();
   temp::Label* true_ = temp::LabelFactory::NewLabel();
@@ -709,6 +710,85 @@ tr::ExpAndTy *ForExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                 tr::Level *level, temp::Label *label,
                                 err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  // get the loop variable
+  env::EnvEntry* iter = venv->Look(this->var_);
+  tree::Exp* iter_val = static_cast<env::VarEntry*>(iter)->access_->access_->ToExp(new tree::TempExp(reg_manager->FramePointer()));
+
+  // define some jump label
+  temp::Label* tr_fir = temp::LabelFactory::NewLabel();
+  temp::Label* fal_fir = temp::LabelFactory::NewLabel();
+  temp::Label* tr_sec = temp::LabelFactory::NewLabel();
+  temp::Label* Loop = temp::LabelFactory::NewLabel();
+  temp::Label* tr_thi = temp::LabelFactory::NewLabel();
+  temp::Label* done_  = temp::LabelFactory::NewLabel();
+
+  tree::Exp* limit_ = this->hi_->Translate(venv,tenv,level,label,errormsg)->exp_->UnEx(); 
+  tree::Exp* low_lim = this->lo_->Translate(venv,tenv,level,label,errormsg)->exp_->UnEx(); 
+  // predefine some condition jump
+  tree::CjumpStm* cx_1 = new tree::CjumpStm(tree::RelOp::GT_OP,
+  iter_val,limit_, tr_fir,fal_fir);
+  tree::CjumpStm* cx_2 = new tree::CjumpStm(tree::RelOp::EQ_OP,
+  iter_val, limit_, tr_sec, Loop);
+  tree::CjumpStm* cx_3 = new tree::CjumpStm(tree::RelOp::LE_OP,
+  iter_val, limit_, tr_thi, done_);
+
+  // goto done_
+  tree::Stm* goto_done = new tree::JumpStm(new tree::NameExp(done_), new std::vector<temp::Label*>({done_}));
+
+  // body
+  tree::Stm* body_ = this->body_->Translate(venv,tenv,level,label,errormsg)->exp_->UnNx();
+
+  tree::Stm* inner_loop = new tree::SeqStm(
+    cx_1,
+    new tree::SeqStm(
+      new tree::LabelStm(tr_fir),
+      new tree::SeqStm(
+        goto_done,
+        new tree::SeqStm(
+          new tree::LabelStm(fal_fir),
+          new tree::SeqStm(
+            body_,
+            new tree::SeqStm(
+              cx_2,
+              new tree::SeqStm(
+                new tree::LabelStm(tr_sec),
+                new tree::SeqStm(
+                  goto_done,
+                  new tree::SeqStm(
+                    new tree::LabelStm(Loop),
+                    new tree::SeqStm(
+                      new tree::MoveStm(iter_val, new tree::BinopExp(tree::BinOp::PLUS_OP,iter_val,new tree::ConstExp(1))),
+                      new tree::SeqStm(
+                        body_,
+                        new tree::SeqStm(
+                          cx_3,
+                          new tree::SeqStm(
+                            new tree::LabelStm(tr_thi),
+                            new tree::SeqStm(
+                              new tree::JumpStm(new tree::NameExp(Loop), new std::vector<temp::Label*>({Loop})),
+                              new tree::LabelStm(done_)
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  );
+
+  tree::Stm* last_ = new tree::SeqStm(
+    new  tree::MoveStm(iter_val,low_lim),
+    inner_loop
+  );
+
+  return new tr::ExpAndTy(new tr::NxExp(last_),type::VoidTy::Instance());
+
 }
 
 tr::ExpAndTy *BreakExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
