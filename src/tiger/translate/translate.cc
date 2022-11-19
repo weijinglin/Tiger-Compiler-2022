@@ -795,12 +795,51 @@ tr::ExpAndTy *BreakExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                   tr::Level *level, temp::Label *label,
                                   err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  tree::Stm* jump_ = new tree::JumpStm(new tree::NameExp(label),new std::vector<temp::Label*>({label}));
+  return new tr::ExpAndTy(new tr::NxExp(jump_),type::VoidTy::Instance());
 }
 
 tr::ExpAndTy *LetExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                 tr::Level *level, temp::Label *label,
                                 err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  std::list<tr::Exp*> dec_list;
+  for(auto dec : this->decs_->GetList()){
+    dec_list.push_back(dec->Translate(venv,tenv,level,label,errormsg));
+  }
+
+  // link all the exp together
+  tr::ExpAndTy* res;
+  if(dec_list.size() != 0){
+    auto iter = dec_list.end();
+    iter--;
+    iter--;
+    tree::Stm* left_stm = new tree::ExpStm(dec_list.back()->UnEx());
+    int counter = 0;
+    if(dec_list.size() == 1){
+      tr::ExpAndTy* body_res = this->body_->Translate(venv,tenv,level,label,errormsg);
+      res = new tr::ExpAndTy(new tr::ExExp(new tree::EseqExp(left_stm,
+      body_res->exp_->UnEx())),body_res->ty_);
+    } else {
+      while(true){
+        left_stm = new tree::SeqStm((*iter)->UnNx(),left_stm);
+        iter--;
+        counter++;
+        if(counter + 1 == dec_list.size()){
+          break;
+        }
+      }
+
+      tr::ExpAndTy* body_res = this->body_->Translate(venv,tenv,level,label,errormsg);
+      res = new tr::ExpAndTy(new tr::ExExp(new tree::EseqExp(left_stm,
+      body_res->exp_->UnEx())),body_res->ty_);
+    }
+  } else {
+    tr::ExpAndTy* body_res = this->body_->Translate(venv,tenv,level,label,errormsg);
+    res = new tr::ExpAndTy(new tr::ExExp(body_res->exp_->UnEx()),body_res->ty_);
+  }
+
+  return res;  
 }
 
 tr::ExpAndTy *ArrayExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
@@ -813,6 +852,8 @@ tr::ExpAndTy *VoidExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                  tr::Level *level, temp::Label *label,
                                  err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  // TODO(wjl) : use const(0) to represent the VoidExp's return value
+  return new tr::ExpAndTy(new tr::ExExp(new tree::ConstExp(0)), type::VoidTy::Instance());
 }
 
 tr::Exp *FunctionDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
