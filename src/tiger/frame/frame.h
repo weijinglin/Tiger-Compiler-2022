@@ -173,6 +173,30 @@ tree::Stm* procEntryExit1(frame::Frame *frame, tree::Stm* stm){
   tree::Stm* new_stm = (*iter);
   --iter;
   // do concat job
+  int callee_num = reg_manager->CalleeSaves()->GetList().size();
+  int counter = 0;
+  while(true){
+    new_stm = new tree::SeqStm(*iter,new_stm);
+    counter++;
+    --iter;
+    if(counter + 1 == callee_num){
+      break;
+    }
+  }
+  new_stm = new tree::SeqStm(stm,new_stm);
+
+  counter = 0;
+  while(true){
+    new_stm = new tree::SeqStm(*iter,new_stm);
+    counter++;
+    if(iter == frame->view_shift->begin()){
+      break;
+    }
+    --iter;
+  }
+
+  return new_stm;
+
 }
 
 assem::InstrList* procEntryExit2(assem::InstrList* body){

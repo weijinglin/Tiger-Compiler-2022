@@ -930,6 +930,7 @@ tr::Exp *FunctionDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     tree::Stm* all_stm = frame::procEntryExit1(static_cast<env::FunEntry*>(_fun)->level_->frame_,mov_stm);
 
     frame::ProcFrag* _frag = new frame::ProcFrag(all_stm,static_cast<env::FunEntry*>(_fun)->level_->frame_);
+    // add the function to the frags
     frags->PushBack(_frag);
     venv->EndScope();
   }
@@ -941,25 +942,75 @@ tr::Exp *VarDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                            tr::Level *level, temp::Label *label,
                            err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  // assign the core frame
+  tr::Access* var_acc = tr::Access::AllocLocal(level, this->escape_);
+
+  tree::Exp* var_exp = var_acc->access_->ToExp(new tree::TempExp(reg_manager->FramePointer()));
+  tree::Stm* out_stm = new tree::MoveStm(var_exp, this->init_->Translate(venv,tenv,level,label,errormsg)->exp_->UnEx());
+
+  type::Ty* act_ty = tenv->Look(this->typ_);
+  venv->Enter(this->var_, new env::VarEntry(act_ty,false));
+
+  return new tr::NxExp(out_stm);
 }
 
 tr::Exp *TypeDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                             tr::Level *level, temp::Label *label,
                             err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  // look all type label and put it into the tenv
+  // TODO(wjl) : here don't implement cycle finding so may be buggy
+  for(auto a_ty : this->types_->GetList()){
+    tenv->Enter(a_ty->name_, new type::NameTy(a_ty->name_,nullptr));
+  }
+
+  for(auto a_ty : this->types_->GetList()){
+    type::Ty* act_ty = a_ty->ty_->Translate(tenv,errormsg);
+    if(dynamic_cast<type::RecordTy*> (act_ty) != nullptr || dynamic_cast<type::ArrayTy*> (act_ty) != nullptr){
+      static_cast<type::NameTy *>(tenv->Look(a_ty->name_))->ty_ = act_ty;
+    } else {
+      static_cast<type::NameTy *>(tenv->Look(a_ty->name_))->ty_ = act_ty;
+    }
+  }
+
+  return new tr::ExExp(new tree::ConstExp(0));
+  
 }
 
 type::Ty *NameTy::Translate(env::TEnvPtr tenv, err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  type::Ty* name_ty = tenv->Look(this->name_);
+  return new type::NameTy(this->name_,name_ty);
 }
 
 type::Ty *RecordTy::Translate(env::TEnvPtr tenv,
                               err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  std::list<Field *> all_fie = this->record_->GetList();
+  type::FieldList* act_fie = new type::FieldList();
+  for(auto fie_ : all_fie){
+    type::Ty* name_ty = tenv->Look(fie_->typ_);
+    if(name_ty){
+      act_fie->Append(new type::Field(fie_->name_,name_ty));
+    } else{
+      std::string err_msg = "undefined type " + fie_->typ_->Name();
+      errormsg->Error(this->pos_,err_msg);
+      return new type::RecordTy(act_fie);
+    }
+  }
+
+  return new type::RecordTy(act_fie);
 }
 
 type::Ty *ArrayTy::Translate(env::TEnvPtr tenv, err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  type::Ty* arr_ty = tenv->Look(this->array_);
+  if(arr_ty){
+    return new type::ArrayTy(arr_ty);
+  } else {
+    errormsg->Error(this->pos_,"wrong in the array type\n");
+    return nullptr;
+  }
 }
 
 } // namespace absyn
