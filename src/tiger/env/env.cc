@@ -125,3 +125,54 @@ void ProgTr::FillBaseVEnv() {
 }
 
 } // namespace tr
+
+namespace frame{
+    tree::Exp* externalCall(std::string_view s, tree::ExpList *args){
+        // TODO(wjl) : there don't do any deal with
+        return new tree::CallExp(new tree::NameExp(temp::LabelFactory::NamedLabel(s)),args);
+    }
+
+    tree::Stm* procEntryExit1(frame::Frame *frame, tree::Stm* stm){
+        // concat the view shift code with the given code
+        auto iter = frame->view_shift->end();
+        --iter;
+        tree::Stm* new_stm = (*iter);
+        --iter;
+        // do concat job
+        int callee_num = reg_manager->CalleeSaves()->GetList().size();
+        int counter = 0;
+        while(true){
+            new_stm = new tree::SeqStm(*iter,new_stm);
+            counter++;
+            --iter;
+            if(counter + 1 == callee_num){
+            break;
+            }
+        }
+        new_stm = new tree::SeqStm(stm,new_stm);
+
+        counter = 0;
+        while(true){
+            new_stm = new tree::SeqStm(*iter,new_stm);
+            counter++;
+            if(iter == frame->view_shift->begin()){
+            break;
+            }
+            --iter;
+        }
+
+        return new_stm;
+
+    }
+
+    assem::InstrList* ProcEntryExit2(assem::InstrList* body){
+
+    }
+
+    assem::Proc* ProcEntryExit3(frame::Frame *frame, assem::InstrList *body){
+
+    }
+
+
+
+}

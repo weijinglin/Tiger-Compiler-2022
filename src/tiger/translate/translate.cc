@@ -130,7 +130,7 @@ void ProgTr::Translate() {
   // translate from the root
   tr::ExpAndTy* res =  this->absyn_tree_.get()->Translate((this->venv_.get()),
   (this->tenv_.get()),this->main_level_.get(),
-  this->main_level_.get()->frame_->fun_label,this->errormsg_.get());
+  this->main_level_.get()->frame_->name_,this->errormsg_.get());
 
   frags->PushBack(new frame::ProcFrag(res->exp_->UnNx(),this->main_level_.get()->frame_));
 }
@@ -187,7 +187,7 @@ tr::ExpAndTy *SimpleVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     tr::Access *sim_access = static_cast< env::VarEntry* >( sim_var )->access_;
     if(!sim_access){
       printf("what ? seg in SimpleVar\n");
-      return;
+      return nullptr;
     } else {
       // compute the correct static link
       tree::Exp *static_link = static_link_com(sim_access->level_,level);

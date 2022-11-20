@@ -85,7 +85,7 @@ public:
   // all formals used by a function and their location is stored in the Access
   std::list<frame::Access *> *formals_;
   // represent for the function label
-  temp::Label* fun_label;
+  temp::Label* name_;
   // some instruction used for imple view shift
   std::list<tree::Stm *> *view_shift;
   // the size of frame assigned so far
@@ -95,7 +95,7 @@ public:
   // other case such as local var and saved register is not determined
   // this time.
   // usage : construct a new frame
-  Frame(temp::Label* fun_name,std::list<bool> formals):frame_size(8),fun_label(fun_name)
+  Frame(temp::Label* fun_name,std::list<bool> formals):frame_size(8),name_(fun_name)
   {
     // don't need to deal with the formals(because escape analysis)
     this->formals_ = new std::list<frame::Access *>;
@@ -106,6 +106,10 @@ public:
   virtual frame::Access* allocLocal(bool escape) = 0;
 
   ~Frame(){ delete this->formals_; }
+
+  std::string GetLabel(){
+    return this->name_->Name();
+  }
   
 };
 
@@ -161,51 +165,13 @@ private:
 };
 
 /* TODO: Put your lab5 code here */
-tree::Exp* externalCall(std::string_view s, tree::ExpList *args){
-  // TODO(wjl) : there don't do any deal with
-  return new tree::CallExp(new tree::NameExp(temp::LabelFactory::NamedLabel(s)),args);
-}
+tree::Exp* externalCall(std::string_view s, tree::ExpList *args);
 
-tree::Stm* procEntryExit1(frame::Frame *frame, tree::Stm* stm){
-  // concat the view shift code with the given code
-  auto iter = frame->view_shift->end();
-  --iter;
-  tree::Stm* new_stm = (*iter);
-  --iter;
-  // do concat job
-  int callee_num = reg_manager->CalleeSaves()->GetList().size();
-  int counter = 0;
-  while(true){
-    new_stm = new tree::SeqStm(*iter,new_stm);
-    counter++;
-    --iter;
-    if(counter + 1 == callee_num){
-      break;
-    }
-  }
-  new_stm = new tree::SeqStm(stm,new_stm);
+assem::Proc* ProcEntryExit3(frame::Frame *frame, assem::InstrList *body);
 
-  counter = 0;
-  while(true){
-    new_stm = new tree::SeqStm(*iter,new_stm);
-    counter++;
-    if(iter == frame->view_shift->begin()){
-      break;
-    }
-    --iter;
-  }
+tree::Stm* procEntryExit1(frame::Frame *frame, tree::Stm* stm);
 
-  return new_stm;
-
-}
-
-assem::InstrList* procEntryExit2(assem::InstrList* body){
-
-}
-
-assem::Proc* procEntryExit3(frame::Frame *frame, assem::InstrList *body){
-
-}
+assem::InstrList* ProcEntryExit2(assem::InstrList* body);
 
 } // namespace frame
 

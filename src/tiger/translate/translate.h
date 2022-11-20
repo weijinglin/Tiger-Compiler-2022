@@ -98,7 +98,7 @@ public:
     temp::Label* main_label = temp::LabelFactory::NamedLabel("main");
     std::list<bool> formals;
     frame::Frame* main_frame = new frame::X64Frame(main_label,formals);
-    main_level_ = std::make_unique<Level>(new tr::Level(nullptr,main_frame,0));
+    main_level_.reset(new tr::Level(nullptr,main_frame,0));
 
     // do some init job
     this->FillBaseTEnv();

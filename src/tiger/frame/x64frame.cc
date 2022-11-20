@@ -39,34 +39,8 @@ class X64Frame : public Frame {
 
 public:
   // need to do the view shift code generation and 
-  X64Frame(temp::Label* fun_name,std::list<bool> formals);
-
-  // assigned a new var
-  frame::Access* allocLocal(bool escape) override;
-
-  ~X64Frame();
-
-};
-/* TODO: Put your lab5 code here */
-// assigned a new var
-frame::Access* X64Frame::allocLocal(bool escape){
-  // generate core access according to the escape
-  if(escape){
-    // allocate on Frame
-    frame::Access *new_access = new frame::InFrameAccess(this->frame_size);
-    // add the use of frame
-    this->frame_size += 8;
-    return new_access;
-  } else {
-    // alloc on register
-    temp::Temp* new_temp = temp::TempFactory::NewTemp();
-    frame::Access *new_access = new frame::InRegAccess(new_temp);
-    return new_access;
-  }
-}
-
-X64Frame::X64Frame(temp::Label* fun_name,std::list<bool> formals) : Frame(fun_name,formals)
-{
+  X64Frame(temp::Label* fun_name,std::list<bool> formals)
+  {
   // code for code generation , such as put the escape variable to the stack
   // 1, do some escape frame saving
   // 2, save callee saved registers
@@ -114,8 +88,26 @@ X64Frame::X64Frame(temp::Label* fun_name,std::list<bool> formals) : Frame(fun_na
   }
 }
 
-X64Frame::~X64Frame(){
+  // assigned a new var
+  frame::Access* allocLocal(bool escape) override{
+    // generate core access according to the escape
+    if(escape){
+      // allocate on Frame
+      frame::Access *new_access = new frame::InFrameAccess(this->frame_size);
+      // add the use of frame
+      this->frame_size += 8;
+      return new_access;
+    } else {
+      // alloc on register
+      temp::Temp* new_temp = temp::TempFactory::NewTemp();
+      frame::Access *new_access = new frame::InRegAccess(new_temp);
+      return new_access;
+    }
+  };
 
-}
+  ~X64Frame(){};
+
+};
+/* TODO: Put your lab5 code here */
 
 } // namespace frame
