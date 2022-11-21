@@ -24,7 +24,9 @@ AbsynTree::AbsynTree(absyn::Exp *root) : root_(root) {
     throw std::invalid_argument("NULL pointer is not allowed in AbsynTree");
 }
 
-AbsynTree::~AbsynTree() { delete root_; }
+AbsynTree::~AbsynTree() { 
+  delete root_; 
+}
 
 void AbsynTree::Print(FILE *out) const { root_->Print(out, 0); }
 

@@ -99,6 +99,7 @@ public:
   {
     // don't need to deal with the formals(because escape analysis)
     this->formals_ = new std::list<frame::Access *>;
+    this->view_shift = new std::list<tree::Stm*>;
   }
 
   Frame() = default;

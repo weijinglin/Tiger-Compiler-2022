@@ -39,12 +39,20 @@ class X64Frame : public Frame {
 
 public:
   // need to do the view shift code generation and 
-  X64Frame(temp::Label* fun_name,std::list<bool> formals)
+  X64Frame(temp::Label* fun_name,std::list<bool> formals) : Frame(fun_name,formals)
   {
   // code for code generation , such as put the escape variable to the stack
   // 1, do some escape frame saving
   // 2, save callee saved registers
   // 3, restore callee saved registers
+
+  // init the formals of frame object
+  for(auto for_bu : formals){
+    frame::Access* a_for = this->allocLocal(for_bu);
+    this->formals_->push_back(a_for);
+  }
+
+
   int counter = 0;
   std::list<temp::Temp*> temp_list = reg_manager->ArgRegs()->GetList();
   auto iter = temp_list.begin();
@@ -96,11 +104,17 @@ public:
       frame::Access *new_access = new frame::InFrameAccess(this->frame_size);
       // add the use of frame
       this->frame_size += 8;
+      if(!new_access){
+        printf("what wrong\n");
+      }
       return new_access;
     } else {
       // alloc on register
       temp::Temp* new_temp = temp::TempFactory::NewTemp();
       frame::Access *new_access = new frame::InRegAccess(new_temp);
+      if(!new_access){
+        printf("what wrong\n");
+      }
       return new_access;
     }
   };
