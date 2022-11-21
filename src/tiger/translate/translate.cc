@@ -304,7 +304,7 @@ tr::ExpAndTy *NilExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                 err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
   // TODO(wjl): left Exp* nullptr may be buggy
-  return new tr::ExpAndTy(nullptr,type::NilTy::Instance());
+  return new tr::ExpAndTy(new tr::ExExp(new tree::ConstExp(0)),type::NilTy::Instance());
 }
 
 tr::ExpAndTy *IntExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
@@ -329,6 +329,7 @@ tr::ExpAndTy *CallExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                  err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
   // need to push the static link to the first formals
+  printf("into call_exp\n");
   tree::Exp* fun_name = new tree::NameExp(this->func_);
   tree::ExpList* args = new tree::ExpList();
   if(label == this->func_){
@@ -544,6 +545,7 @@ tr::ExpAndTy *RecordExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                    tr::Level *level, temp::Label *label,      
                                    err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  printf("record exp\n");
   std::list<absyn::EField*> eFie_list = this->fields_->GetList();
   std::list<tr::ExpAndTy*> *exp_list = new std::list<tr::ExpAndTy*>();
   for(auto efie : eFie_list){
@@ -580,14 +582,18 @@ tr::ExpAndTy *RecordExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   auto iter = move_list.end();
   iter--;
   iter--;
-  for(;;--iter){
-    pro_stm = new tree::SeqStm(*(iter),pro_stm);
-    loop_time++;
-    if(loop_time + 1 == move_list.size()){
-      if(iter != move_list.begin()){
-        printf("count err\n");
+  if(move_list.size() == 1){
+
+  } else {
+    for(;;--iter){
+      pro_stm = new tree::SeqStm(*(iter),pro_stm);
+      loop_time++;
+      if(loop_time + 1 == move_list.size()){
+        if(iter != move_list.begin()){
+          printf("count err\n");
+        }
+        break;
       }
-      break;
     }
   }
 
@@ -650,6 +656,7 @@ tr::ExpAndTy *IfExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                tr::Level *level, temp::Label *label,
                                err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  printf("into if\n");
   tr::ExpAndTy* test_ = this->test_->Translate(venv,tenv,level,label,errormsg);
 
   temp::Label* _true = temp::LabelFactory::NewLabel();
@@ -769,6 +776,8 @@ tr::ExpAndTy *ForExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                 err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
   // get the loop variable
+  venv->BeginScope();
+  venv->Enter(this->var_,new env::VarEntry(tr::Access::AllocLocal(level,this->escape_),type::IntTy::Instance(),true));
   env::EnvEntry* iter = venv->Look(this->var_);
   tree::Exp* iter_val = static_cast<env::VarEntry*>(iter)->access_->access_->ToExp(new tree::TempExp(reg_manager->FramePointer()));
 
@@ -845,6 +854,8 @@ tr::ExpAndTy *ForExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     inner_loop
   );
 
+  venv->EndScope();
+
   return new tr::ExpAndTy(new tr::NxExp(last_),type::VoidTy::Instance());
 
 }
@@ -911,6 +922,7 @@ tr::ExpAndTy *ArrayExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                   err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
   // prepare for malloc size
+  printf("into array\n");
   tree::Exp* _size = this->size_->Translate(venv,tenv,level,label,errormsg)->exp_->UnEx();
   tree::Exp* _init = this->init_->Translate(venv,tenv,level,label,errormsg)->exp_->UnEx();
 
@@ -922,7 +934,13 @@ tr::ExpAndTy *ArrayExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   tree::Stm* move_stm = new tree::MoveStm(new tree::TempExp(ans),_call);
 
   // TODO(wjl) : array type or one primitive type
-  type::Ty* res_ty = tenv->Look(this->typ_);
+  type::Ty* res_ty = tenv->Look(this->typ_)->ActualTy();
+
+  printf("type is %s\n",this->typ_->Name().c_str());
+
+  if(dynamic_cast<type::ArrayTy*>(res_ty) != nullptr){
+    printf("array type is right\n");
+  }
 
   return new tr::ExpAndTy(new tr::ExExp(new tree::EseqExp(move_stm,new tree::TempExp(ans))),res_ty);
 }
@@ -942,6 +960,7 @@ tr::Exp *FunctionDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   // parse the label of the function first
   std::list<tree::LabelStm*> all_lab; 
   std::vector<tr::Level*> all_new_level;
+  printf("into fun_dec\n");
   for(auto fun_dec : this->functions_->GetList()){
     // construct the function Label
     temp::Label* fun_label = temp::LabelFactory::NamedLabel(fun_dec->name_->Name());
@@ -979,10 +998,13 @@ tr::Exp *FunctionDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     venv->Enter(fun_dec->name_,new_fun);
   }
 
+  printf("can pass first loop\n");
+
   // parse the function body
   // prologue and epilogue is not care in translate stage
   int glo_count = 0;
   for(auto fun_bo : this->functions_->GetList()){
+    printf("loop\n");
     // prepare for the params of a function
     std::list<absyn::Field*> fie_list = fun_bo->params_->GetList();
     auto iter = fie_list.begin();
@@ -1010,6 +1032,8 @@ tr::Exp *FunctionDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     glo_count++;
   }
 
+  printf("can pass second loop\n");
+
   return new tr::ExExp(new tree::ConstExp(0));
 }
 
@@ -1026,7 +1050,7 @@ tr::Exp *VarDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     tree::Stm* out_stm = new tree::MoveStm(var_exp, this->init_->Translate(venv,tenv,level,label,errormsg)->exp_->UnEx());
 
     type::Ty* act_ty = tenv->Look(this->typ_)->ActualTy();
-    // TODO(wjl) : a bug : using the interface defined by lab4 (fixed)
+    // DONE(wjl) : a bug : using the interface defined by lab4 (fixed)
     venv->Enter(this->var_, new env::VarEntry(var_acc,act_ty,false));
     return new tr::NxExp(out_stm);
   } else{
