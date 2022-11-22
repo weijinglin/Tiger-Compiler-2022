@@ -84,7 +84,12 @@ class X64RegManager : public RegManager {
       }
       return res;
     }
-    temp::TempList *ReturnSink() override{}
+    temp::TempList *ReturnSink() override{
+      temp::TempList *temp_list = CalleeSaves();
+      temp_list->Append(StackPointer());
+      temp_list->Append(ReturnValue());
+      return temp_list;
+    }
     int WordSize() override{
       // TODO(wjl) : assume the size of a word is 8 bytes
       return 8;

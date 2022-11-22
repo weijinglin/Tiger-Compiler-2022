@@ -130,13 +130,11 @@ public:
 void ProgTr::Translate() {
   /* TODO: Put your lab5 code here */
   // translate from the root
-  printf("begin translate\n");
   tr::ExpAndTy* res =  this->absyn_tree_.get()->Translate((this->venv_.get()),
   (this->tenv_.get()),this->main_level_.get(),
   this->main_level_.get()->frame_->name_,this->errormsg_.get());
 
   frags->PushBack(new frame::ProcFrag(res->exp_->UnNx(),this->main_level_.get()->frame_));
-  printf("end translate\n");
 }
 
 } // namespace tr
