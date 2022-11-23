@@ -330,27 +330,35 @@ tr::ExpAndTy *CallExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   printf("into call_exp\n");
   tree::Exp* fun_name = new tree::NameExp(this->func_);
   tree::ExpList* args = new tree::ExpList();
-  if(label == this->func_){
-    // transfer static link
-    frame::Access* static_acc = level->frame_->formals_->front();
-    tree::Exp* static_exp = static_acc->ToExp(new tree::TempExp(reg_manager->FramePointer()));
-    args->Append(static_exp);
+  env::EnvEntry *fun_entry = venv->Look(this->func_);
+  // TODO(wjl) : find a bug (external function should not pass static link)
+  if(static_cast<env::FunEntry*>(fun_entry)->label_ == nullptr){
+    // external function
     for(auto arg : this->args_->GetList()){
       tr::ExpAndTy* mid_res = arg->Translate(venv,tenv,level,label,errormsg);
       args->Append(mid_res->exp_->UnEx());
     }
   } else {
-    // transfer the frame pointer
-    tree::Exp* static_exp = new tree::TempExp(reg_manager->FramePointer());
-    args->Append(static_exp);
-    for(auto arg : this->args_->GetList()){
-      tr::ExpAndTy* mid_res = arg->Translate(venv,tenv,level,label,errormsg);
-      args->Append(mid_res->exp_->UnEx());
+    if(label == this->func_){
+      // transfer static link
+      frame::Access* static_acc = level->frame_->formals_->front();
+      tree::Exp* static_exp = static_acc->ToExp(new tree::TempExp(reg_manager->FramePointer()));
+      args->Append(static_exp);
+      for(auto arg : this->args_->GetList()){
+        tr::ExpAndTy* mid_res = arg->Translate(venv,tenv,level,label,errormsg);
+        args->Append(mid_res->exp_->UnEx());
+      }
+    } else {
+      // transfer the frame pointer
+      tree::Exp* static_exp = new tree::TempExp(reg_manager->FramePointer());
+      args->Append(static_exp);
+      for(auto arg : this->args_->GetList()){
+        tr::ExpAndTy* mid_res = arg->Translate(venv,tenv,level,label,errormsg);
+        args->Append(mid_res->exp_->UnEx());
+      }
     }
   }
 
-  // get the function return type
-  env::EnvEntry *fun_entry = venv->Look(this->func_);
   type::Ty* last_ty;
   if(dynamic_cast<env::FunEntry*>(fun_entry) != nullptr){
     last_ty = static_cast<env::FunEntry*>(fun_entry)->result_;

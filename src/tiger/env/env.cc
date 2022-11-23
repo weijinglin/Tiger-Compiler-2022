@@ -175,9 +175,9 @@ namespace frame{
     assem::Proc* ProcEntryExit3(frame::Frame *frame, assem::InstrList *body){
         char buf[100];
         sprintf(buf, 
-        "%s:\n", 
+        "%s:\nsubq  $0x8,%rsp\n", 
         temp::LabelFactory::LabelString(frame->name_).data());
-        return new assem::Proc(std::string(buf), body, "\n");
+        return new assem::Proc(std::string(buf), body, "addq  $0x8,%rsp\nretq\n");
     }
 
 

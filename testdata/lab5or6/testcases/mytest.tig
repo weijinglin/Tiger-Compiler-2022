@@ -1,5 +1,6 @@
 let 
     var a := 1
 in 
-    a
+    print("test\n");
+    printi(a)
 end

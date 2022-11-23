@@ -13,7 +13,7 @@ class X64RegManager : public RegManager {
   
   public:
     X64RegManager(){
-      for(int i = 0;i < 16;++i){
+      for(int i = 0;i < 17;++i){
         temp::Temp *reg = temp::TempFactory::NewTemp();
         this->regs_.push_back(reg);
       }
@@ -35,6 +35,7 @@ class X64RegManager : public RegManager {
       this->temp_map_->Enter(regs_[13],new std::string("%r13"));
       this->temp_map_->Enter(regs_[14],new std::string("%r14"));
       this->temp_map_->Enter(regs_[15],new std::string("%r15"));
+      this->temp_map_->Enter(regs_[16],new std::string("%rip"));
     }
     /**
        * Get general-purpose registers except RSI
@@ -46,7 +47,7 @@ class X64RegManager : public RegManager {
       for(int i = 1;i < 4;++i){
         res->Append(regs_[i]);
       }
-      for(int i = 5;i < 16;++i){
+      for(int i = 5;i < 17;++i){
         res->Append(regs_[i]);
       }
       return res;
