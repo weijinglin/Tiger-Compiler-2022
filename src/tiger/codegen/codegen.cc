@@ -538,10 +538,25 @@ temp::Temp *EseqExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
 
 temp::Temp *NameExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
-  temp::Temp* name_tmp = temp::TempFactory::NewTemp();
-  std::string* name_str = new std::string(this->name_->Name());
+  // TODO(wjl) : attention : this code is relative to machine(may be buggy in actually x64 frame)
+  std::string label_ = this->name_->Name();
+  int length = label_.length();
+  std::string num_str = label_.substr(1,length-1);
+  int num = atoi(num_str.c_str());
 
-  reg_manager->temp_map_->Enter(name_tmp,name_str);
+  printf("get name is %s\n",this->name_->Name().c_str());
+  printf("the num of string is %d\n",num);
+  
+  temp::Temp* name_tmp = temp::TempFactory::NewTemp();
+  // std::string* name_str = new std::string(this->name_->Name());
+
+  int add_ = 0x400000 + num * 8;
+
+  // reg_manager->temp_map_->Enter(name_tmp,name_str);
+  instr_list.Append(new assem::MoveInstr("movq  $" + std::to_string(
+    add_
+  )  + ",`d0\n", new temp::TempList(name_tmp),
+  nullptr));
   return name_tmp;
 }
 
@@ -556,7 +571,11 @@ temp::Temp *ConstExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
 
 temp::Temp *CallExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
-  temp::Temp* fun = this->fun_->Munch(instr_list,fs);
+  // temp::Temp* fun = this->fun_->Munch(instr_list,fs);
+  // TODO(wjl) : tiger don't exist function embedded
+  temp::Temp* fun = temp::TempFactory::NewTemp();
+  std::string *fun_name = new std::string(static_cast<tree::NameExp*>(this->fun_)->name_->Name());
+  reg_manager->temp_map_->Enter(fun,fun_name);
   // put the out in core registers
   temp::TempList* args = this->args_->MunchArgs(instr_list,fs);
   temp::TempList *call_decs = reg_manager->CallerSaves();
