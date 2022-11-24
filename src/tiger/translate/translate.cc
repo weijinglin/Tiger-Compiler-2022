@@ -134,7 +134,14 @@ void ProgTr::Translate() {
   (this->tenv_.get()),this->main_level_.get(),
   this->main_level_.get()->frame_->name_,this->errormsg_.get());
 
-  frags->PushBack(new frame::ProcFrag(res->exp_->UnNx(),this->main_level_.get()->frame_));
+  frags->PushBack(new frame::ProcFrag(frame::procEntryExit1(main_level_.get()->frame_,res->exp_->UnNx()),this->main_level_.get()->frame_));
+
+  // debug code 
+  for(auto frag : frags->GetList()){
+    if(dynamic_cast<frame::ProcFrag*>(frag) != nullptr){
+      static_cast<frame::ProcFrag*>(frag)->body_->Print(stderr,1);
+    }
+  }
 }
 
 } // namespace tr
@@ -148,7 +155,7 @@ tr::ExpAndTy *AbsynTree::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   tr::ExpAndTy* res =  this->root_->Translate(venv,tenv,level,label,errormsg);
   // debug code
   // FILE* test_file = fopen("test_file","a");
-  res->exp_->UnEx()->Print(stderr,1);
+  // res->exp_->UnEx()->Print(stderr,1);
   return res;
 }
 
@@ -673,7 +680,12 @@ tr::ExpAndTy *IfExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   temp::Temp* res = temp::TempFactory::NewTemp();
 
   // build the true branch
+  bool is_void = false;
   tr::ExpAndTy* true_exp = this->then_->Translate(venv,tenv,level,label,errormsg);
+  // TODO(wjl) : take care of the VOIDTYPE of function
+  if(dynamic_cast<type::VoidTy*>(true_exp->ty_) != nullptr){
+    is_void = true;
+  }
   tree::MoveStm* true_mov = new tree::MoveStm(new tree::TempExp(res),true_exp->exp_->UnEx());
 
   // build the false branch
@@ -683,48 +695,92 @@ tr::ExpAndTy *IfExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     tree::MoveStm* false_mov = new tree::MoveStm(new tree::TempExp(res),false_exp->exp_->UnEx());
     test_->exp_->UnCx(errormsg).falses_.DoPatch(_false);
     test_->exp_->UnCx(errormsg).trues_.DoPatch(_true);
-    all_ = new tree::SeqStm(
-      test_->exp_->UnCx(errormsg).stm_,
-      new tree::SeqStm(
-        new tree::LabelStm(_true),
+    if(!is_void){
+      all_ = new tree::SeqStm(
+        test_->exp_->UnCx(errormsg).stm_,
         new tree::SeqStm(
-          true_mov,
+          new tree::LabelStm(_true),
           new tree::SeqStm(
-            new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
+            true_mov,
             new tree::SeqStm(
-              new tree::LabelStm(_false),
+              new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
               new tree::SeqStm(
-                false_mov,
+                new tree::LabelStm(_false),
                 new tree::SeqStm(
-                  new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
-                  new tree::LabelStm(joint_)
+                  false_mov,
+                  new tree::SeqStm(
+                    new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
+                    new tree::LabelStm(joint_)
+                  )
                 )
               )
             )
           )
-        )
-      ));
+        ));
+    } else {
+      all_ = new tree::SeqStm(
+        test_->exp_->UnCx(errormsg).stm_,
+        new tree::SeqStm(
+          new tree::LabelStm(_true),
+          new tree::SeqStm(
+            true_exp->exp_->UnNx(),
+            new tree::SeqStm(
+              new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
+              new tree::SeqStm(
+                new tree::LabelStm(_false),
+                new tree::SeqStm(
+                  false_exp->exp_->UnNx(),
+                  new tree::SeqStm(
+                    new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
+                    new tree::LabelStm(joint_)
+                  )
+                )
+              )
+            )
+          )
+        ));
+    }
   } else {
     // TODO(wjl) : here may be too redundancy
     test_->exp_->UnCx(errormsg).falses_.DoPatch(_false);
     test_->exp_->UnCx(errormsg).trues_.DoPatch(_true);
-    all_ = new tree::SeqStm(
-      test_->exp_->UnCx(errormsg).stm_,
-      new tree::SeqStm(
-        new tree::LabelStm(_true),
+    if(is_void){
+      all_ = new tree::SeqStm(
+        test_->exp_->UnCx(errormsg).stm_,
         new tree::SeqStm(
-          true_mov,
+          new tree::LabelStm(_true),
           new tree::SeqStm(
-            new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
+            true_exp->exp_->UnNx(),
             new tree::SeqStm(
-              new tree::LabelStm(_false),
+              new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
               new tree::SeqStm(
-                  new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
-                  new tree::LabelStm(joint_)
-                )
-          )
-      )
-    )));
+                new tree::LabelStm(_false),
+                new tree::SeqStm(
+                    new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
+                    new tree::LabelStm(joint_)
+                  )
+            )
+        )
+      )));
+    } else {
+      all_ = new tree::SeqStm(
+        test_->exp_->UnCx(errormsg).stm_,
+        new tree::SeqStm(
+          new tree::LabelStm(_true),
+          new tree::SeqStm(
+            true_mov,
+            new tree::SeqStm(
+              new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
+              new tree::SeqStm(
+                new tree::LabelStm(_false),
+                new tree::SeqStm(
+                    new tree::JumpStm(new tree::NameExp(joint_),new std::vector<temp::Label*>({joint_})),
+                    new tree::LabelStm(joint_)
+                  )
+            )
+        )
+      )));
+    }
   }
 
   return new tr::ExpAndTy(new tr::ExExp(new tree::EseqExp(
@@ -1017,8 +1073,14 @@ tr::Exp *FunctionDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
 
     venv->BeginScope();
 
+    auto formal_list = all_new_level.at(glo_count)->frame_->formals_;
+    auto iter_fo = formal_list->begin();
+    // skip static link
+    iter_fo++;
+
     for(;iter != fie_list.end();++iter){
-      venv->Enter((*iter)->name_, new env::VarEntry(tr::Access::AllocLocal(all_new_level.at(glo_count),(*iter)->escape_),tenv->Look((*iter)->typ_)->ActualTy(),false));
+      venv->Enter((*iter)->name_, new env::VarEntry(new tr::Access(all_new_level.at(glo_count),(*iter_fo)),tenv->Look((*iter)->typ_)->ActualTy(),false));
+      iter_fo++;
     }
 
     // get the core fun entry

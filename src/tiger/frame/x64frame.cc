@@ -29,6 +29,7 @@ public:
   explicit InRegAccess(temp::Temp *reg) : reg(reg) {}
   /* TODO: Put your lab5 code here */
   tree::Exp *ToExp(tree::Exp *framePtr) const override {
+    printf("call toExp num is %d\n",reg->Int());
     return new tree::TempExp(reg);
   }
 
@@ -56,44 +57,50 @@ public:
   int counter = 0;
   std::list<temp::Temp*> temp_list = reg_manager->ArgRegs()->GetList();
   auto iter = temp_list.begin();
+  auto iter_fa = formals_->begin();
+  auto frame_pointer = new tree::TempExp(reg_manager->FramePointer());
   for(auto formal : formals){
-    if(formal){
-      // escape
-      this->view_shift->push_back(new tree::MoveStm(this->allocLocal(true)->ToExp(
-        new tree::TempExp(reg_manager->FramePointer())
-      ),new tree::TempExp(*iter)));
-    } else {
-      // TODO(wjl) : not sure transfer not escape var from a temp register to a new temp register can cause bug ??? 
-      this->view_shift->push_back(new tree::MoveStm(new tree::TempExp(
-        temp::TempFactory::NewTemp()
-      ),new tree::TempExp(*iter)));
+
+    if(counter <= 5){
+      this->view_shift->push_back(new tree::MoveStm(
+        (*iter_fa)->ToExp(frame_pointer)
+        ,new tree::TempExp(*iter)));
     }
-    iter++;
-    counter++;
     if(counter >= 6){
       // only 6 registers
-      break;
+      this->view_shift->push_back(new tree::MoveStm(
+        (*iter_fa)->ToExp(frame_pointer)
+        ,new tree::MemExp(
+              new tree::BinopExp(
+                tree::BinOp::PLUS_OP,
+                frame_pointer,
+                new tree::ConstExp(reg_manager->WordSize() * (counter - 5))
+              )
+            )));
     }
+    iter++;
+    iter_fa++;
+    counter++;
   }
 
   // save callee saved registers
-  std::list<temp::Temp*> save_regs = reg_manager->CalleeSaves()->GetList();
-  std::list<frame::Access*> acc_list; 
-  for(auto reg : save_regs){
-    frame::Access* new_acc = this->allocLocal(true);
-    acc_list.push_back(new_acc);
-    this->view_shift->push_back(new tree::MoveStm(new_acc->ToExp(
-      new tree::TempExp(reg_manager->FramePointer())
-    ),new tree::TempExp(reg)));
-  }
+  // std::list<temp::Temp*> save_regs = reg_manager->CalleeSaves()->GetList();
+  // std::list<frame::Access*> acc_list; 
+  // for(auto reg : save_regs){
+  //   frame::Access* new_acc = this->allocLocal(true);
+  //   acc_list.push_back(new_acc);
+  //   this->view_shift->push_back(new tree::MoveStm(new_acc->ToExp(
+  //     new tree::TempExp(reg_manager->FramePointer())
+  //   ),new tree::TempExp(reg)));
+  // }
 
   // restore callee saved registers
-  auto idx = acc_list.begin();
-  for(auto reg : save_regs){
-    this->view_shift->push_back(new tree::MoveStm(new tree::TempExp(reg),
-      (*idx)->ToExp(new tree::TempExp(reg_manager->FramePointer()))
-    ));
-  }
+  // auto idx = acc_list.begin();
+  // for(auto reg : save_regs){
+  //   this->view_shift->push_back(new tree::MoveStm(new tree::TempExp(reg),
+  //     (*idx)->ToExp(new tree::TempExp(reg_manager->FramePointer()))
+  //   ));
+  // }
 }
 
   // assigned a new var

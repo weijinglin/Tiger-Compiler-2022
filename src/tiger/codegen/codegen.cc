@@ -169,7 +169,11 @@ void MoveStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
         
       // } 
       // test easy case first
-      instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n", new temp::TempList(this->dst_->Munch(instr_list,fs)),
+      temp::Temp* dst = this->dst_->Munch(instr_list,fs);
+      if(dst == nullptr){
+        printf("wrong seg\n");
+      }
+      instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n", new temp::TempList(dst),
       new temp::TempList(this->src_->Munch(instr_list,fs))));
       return;
     } else if(dynamic_cast<tree::ConstExp*>(this->src_) != nullptr){
@@ -177,11 +181,17 @@ void MoveStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
       instr_list.Append(new assem::OperInstr("movq  $" + std::to_string(static_cast<tree::ConstExp*>(this->src_)->consti_)
        + ",`d0\n", new temp::TempList(this->dst_->Munch(instr_list,fs)),nullptr,nullptr));
       return;
+    } else {
+      // test easy case first
+      instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n", new temp::TempList(this->dst_->Munch(instr_list,fs)),
+      new temp::TempList(this->src_->Munch(instr_list,fs))));
+      return;
     }
   } else if(dynamic_cast<tree::TempExp*>(this->src_) != nullptr){
     // case 2 : load from the register
     if(dynamic_cast<tree::MemExp*>(this->dst_) != nullptr){
-      instr_list.Append(new assem::OperInstr("movq  `s0,`d0\n",new temp::TempList(this->dst_->Munch(instr_list,fs)),
+      // TODO(wjl) : buggy here in function call !!!
+      instr_list.Append(new assem::OperInstr("movq  `s0,(`d0)\n",new temp::TempList(static_cast<tree::MemExp*>(this->dst_)->exp_->Munch(instr_list,fs)),
       new temp::TempList(this->src_->Munch(instr_list,fs)),nullptr));
       return;
     } else {
@@ -543,13 +553,11 @@ temp::Temp *NameExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   int length = label_.length();
   std::string num_str = label_.substr(1,length-1);
   int num = atoi(num_str.c_str());
-
-  printf("get name is %s\n",this->name_->Name().c_str());
-  printf("the num of string is %d\n",num);
   
   temp::Temp* name_tmp = temp::TempFactory::NewTemp();
   // std::string* name_str = new std::string(this->name_->Name());
 
+  // TODO(wjl) : attention ! that is buggy code !!!
   int add_ = 0x400000 + num * 8;
 
   // reg_manager->temp_map_->Enter(name_tmp,name_str);

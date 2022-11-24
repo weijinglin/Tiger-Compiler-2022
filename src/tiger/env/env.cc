@@ -135,30 +135,22 @@ namespace frame{
     tree::Stm* procEntryExit1(frame::Frame *frame, tree::Stm* stm){
         // concat the view shift code with the given code
         auto iter = frame->view_shift->end();
-        --iter;
-        tree::Stm* new_stm = (*iter);
+        tree::Stm* new_stm = stm;
         --iter;
         // do concat job
         int callee_num = reg_manager->CalleeSaves()->GetList().size();
         int counter = 0;
-        while(true){
-            new_stm = new tree::SeqStm(*iter,new_stm);
-            counter++;
-            --iter;
-            if(counter + 1 == callee_num){
-            break;
+        if(frame->view_shift->size() == 0){
+            return stm;
+        } else  {
+            while(true){
+                new_stm = new tree::SeqStm(*iter,new_stm);
+                if(iter == frame->view_shift->begin()){
+                    break;
+                }
+                counter++;
+                --iter;
             }
-        }
-        new_stm = new tree::SeqStm(stm,new_stm);
-
-        counter = 0;
-        while(true){
-            new_stm = new tree::SeqStm(*iter,new_stm);
-            counter++;
-            if(iter == frame->view_shift->begin()){
-            break;
-            }
-            --iter;
         }
 
         return new_stm;
@@ -174,10 +166,11 @@ namespace frame{
 
     assem::Proc* ProcEntryExit3(frame::Frame *frame, assem::InstrList *body){
         char buf[100];
+        std::string ahead = "%s:\nsubq  $" + std::to_string(frame->frame_size) + ",%rsp\n";
         sprintf(buf, 
-        "%s:\nsubq  $0x8,%rsp\n", 
+        ahead.c_str(), 
         temp::LabelFactory::LabelString(frame->name_).data());
-        return new assem::Proc(std::string(buf), body, "addq  $0x8,%rsp\nretq\n");
+        return new assem::Proc(std::string(buf), body, "addq  $" + std::to_string(frame->frame_size) + ",%rsp\nretq\n");
     }
 
 

@@ -1,7 +1,7 @@
 let 
     var a := 1
+    function g(a:int) : int = 
+		a
 in 
-    print("test\n");
-    printi(a);
-    print("\n")
+    printi(g(a+1))
 end
