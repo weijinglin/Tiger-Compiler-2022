@@ -366,7 +366,7 @@ tr::ExpAndTy *CallExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     }
   }
 
-  type::Ty* last_ty;
+  type::Ty* last_ty = type::VoidTy::Instance();
   if(dynamic_cast<env::FunEntry*>(fun_entry) != nullptr){
     last_ty = static_cast<env::FunEntry*>(fun_entry)->result_;
   } else {
@@ -864,7 +864,7 @@ tr::ExpAndTy *ForExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   tree::Stm* goto_done = new tree::JumpStm(new tree::NameExp(done_), new std::vector<temp::Label*>({done_}));
 
   // body
-  tree::Stm* body_ = this->body_->Translate(venv,tenv,level,label,errormsg)->exp_->UnNx();
+  tree::Stm* body_ = this->body_->Translate(venv,tenv,level,done_,errormsg)->exp_->UnNx();
 
   tree::Stm* inner_loop = new tree::SeqStm(
     cx_1,
@@ -983,7 +983,6 @@ tr::ExpAndTy *ArrayExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                   err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
   // prepare for malloc size
-  printf("into array\n");
   tree::Exp* _size = this->size_->Translate(venv,tenv,level,label,errormsg)->exp_->UnEx();
   tree::Exp* _init = this->init_->Translate(venv,tenv,level,label,errormsg)->exp_->UnEx();
 
@@ -1021,7 +1020,6 @@ tr::Exp *FunctionDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   // parse the label of the function first
   std::list<tree::LabelStm*> all_lab; 
   std::vector<tr::Level*> all_new_level;
-  printf("into fun_dec\n");
   for(auto fun_dec : this->functions_->GetList()){
     // construct the function Label
     temp::Label* fun_label = temp::LabelFactory::NamedLabel(fun_dec->name_->Name());
@@ -1065,7 +1063,6 @@ tr::Exp *FunctionDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   // prologue and epilogue is not care in translate stage
   int glo_count = 0;
   for(auto fun_bo : this->functions_->GetList()){
-    printf("loop\n");
     // prepare for the params of a function
     std::list<absyn::Field*> fie_list = fun_bo->params_->GetList();
     auto iter = fie_list.begin();
@@ -1087,7 +1084,12 @@ tr::Exp *FunctionDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
 
     // translate body
     tr::ExpAndTy* fun_res = fun_bo->body_->Translate(venv,tenv,static_cast<env::FunEntry*>(_fun)->level_,static_cast<env::FunEntry*>(_fun)->label_,errormsg);
-    tree::Stm* mov_stm = new tree::MoveStm(new tree::TempExp(reg_manager->ReturnValue()),fun_res->exp_->UnEx());
+    tree::Stm* mov_stm;
+    if(dynamic_cast<type::VoidTy*>(fun_res->ty_) != nullptr){
+      mov_stm = fun_res->exp_->UnNx();
+    } else {
+      mov_stm = new tree::MoveStm(new tree::TempExp(reg_manager->ReturnValue()),fun_res->exp_->UnEx());
+    }
 
     tree::Stm* all_stm = frame::procEntryExit1(static_cast<env::FunEntry*>(_fun)->level_->frame_,mov_stm);
 
@@ -1098,8 +1100,6 @@ tr::Exp *FunctionDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
 
     glo_count++;
   }
-
-  printf("can pass second loop\n");
 
   return new tr::ExExp(new tree::ConstExp(0));
 }
@@ -1166,7 +1166,6 @@ type::Ty *NameTy::Translate(env::TEnvPtr tenv, err::ErrorMsg *errormsg) const {
 type::Ty *RecordTy::Translate(env::TEnvPtr tenv,
                               err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
-  printf("record\n");
   std::list<Field *> all_fie = this->record_->GetList();
   type::FieldList* act_fie = new type::FieldList();
   for(auto fie_ : all_fie){
