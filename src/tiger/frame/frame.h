@@ -95,7 +95,7 @@ public:
   // other case such as local var and saved register is not determined
   // this time.
   // usage : construct a new frame
-  Frame(temp::Label* fun_name,std::list<bool> formals):frame_size(8),name_(fun_name)
+  Frame(temp::Label* fun_name,std::list<bool> formals):frame_size(0),name_(fun_name)
   {
     // don't need to deal with the formals(because escape analysis)
     this->formals_ = new std::list<frame::Access *>;

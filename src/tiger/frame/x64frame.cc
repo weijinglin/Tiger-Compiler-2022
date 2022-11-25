@@ -107,10 +107,10 @@ public:
   frame::Access* allocLocal(bool escape) override{
     // generate core access according to the escape
     if(escape){
-      // allocate on Frame
-      frame::Access *new_access = new frame::InFrameAccess(this->frame_size);
       // add the use of frame
       this->frame_size += 8;
+      // allocate on Frame
+      frame::Access *new_access = new frame::InFrameAccess(this->frame_size);
       if(!new_access){
         printf("what wrong\n");
       }

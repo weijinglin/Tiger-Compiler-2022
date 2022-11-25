@@ -251,7 +251,7 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
         new temp::TempList(right_reg)));
 
         left_op->Append(res);
-        instr_list.Append(new assem::OperInstr("addq  (`s0),`d0\n", new temp::TempList(res),
+        instr_list.Append(new assem::OperInstr("addq  `s0,`d0\n", new temp::TempList(res),
         left_op,nullptr));
         // right_reg is the register which is returned
         return res;

@@ -56,9 +56,6 @@ class Interpreter(object):
 
                 elif line.startswith('.set'):
                     frame_size = line.split(' ')
-                    print(frame_size)
-                    print(frame_size[1][:-1])
-                    print(frame_size[2])
                     self._frame_size[frame_size[1][:-1]] = frame_size[2]
                     line = f.readline()
                     continue
