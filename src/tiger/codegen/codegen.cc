@@ -295,7 +295,6 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       new temp::TempList(this->left_->Munch(instr_list,fs)),nullptr));
 
       return res;
-      return nullptr;
     } else if(dynamic_cast<tree::ConstExp*>(this->left_) != nullptr){
       // load data from memory to register
       temp::TempList* mem_list = new temp::TempList(this->right_->Munch(instr_list,fs));
@@ -385,8 +384,15 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
       return res;
     } else if(dynamic_cast<tree::MemExp*>(this->left_) != nullptr){
-      printf("error\n");
-      return nullptr;
+      temp::Temp* res = temp::TempFactory::NewTemp();
+      temp::TempList* bin_op = new temp::TempList(this->left_->Munch(instr_list,fs));
+      instr_list.Append(new assem::OperInstr("movq  `s0,`d0\n",new temp::TempList(res),
+      bin_op,nullptr));
+
+      instr_list.Append(new assem::OperInstr("subq  `s0,`d0\n",new temp::TempList(res),
+      new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
+
+      return res;
     } else if(dynamic_cast<tree::ConstExp*>(this->left_) != nullptr){
       // load data from memory to register
       temp::TempList* left_op = new temp::TempList(this->left_->Munch(instr_list,fs));
@@ -554,6 +560,13 @@ temp::Temp *MemExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
 
 temp::Temp *TempExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
+  if(this->temp_->Int() == 106){
+    // replace the register with rsp
+    // it is not problem because rbp here is not used except for frame pointer
+    temp::Temp* my_rbp = temp::TempFactory::NewTemp();
+    instr_list.Append(new assem::OperInstr("leaq  " + std::string(fs) + "(%rsp),`d0",new temp::TempList(my_rbp),nullptr,nullptr));
+    return my_rbp;
+  }
   return this->temp_;
 }
 

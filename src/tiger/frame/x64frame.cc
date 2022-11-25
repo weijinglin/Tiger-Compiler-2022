@@ -15,7 +15,7 @@ public:
     // compute for the frame pos
     // TODO : there may left some problem : should we deal with the offset equal to zero
     tree::Exp* off_exp = new tree::ConstExp(offset);
-    tree::Exp* pos = new tree::BinopExp(tree::BinOp::PLUS_OP,frame_ptr,off_exp);
+    tree::Exp* pos = new tree::BinopExp(tree::BinOp::MINUS_OP,frame_ptr,off_exp);
     return new tree::MemExp(pos);
   }
 

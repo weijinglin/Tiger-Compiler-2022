@@ -166,7 +166,9 @@ namespace frame{
 
     assem::Proc* ProcEntryExit3(frame::Frame *frame, assem::InstrList *body){
         char buf[100];
-        std::string ahead = "%s:\nsubq  $" + std::to_string(frame->frame_size) + ",%rsp\n";
+        std::string fs = frame->name_->Name() + "_framesize";
+        std::string fs_num = std::to_string(frame->frame_size);
+        std::string ahead = ".set " + fs +  ", " + fs_num + "\n%s:\nsubq  $" + std::to_string(frame->frame_size) + ",%rsp\n";
         sprintf(buf, 
         ahead.c_str(), 
         temp::LabelFactory::LabelString(frame->name_).data());
