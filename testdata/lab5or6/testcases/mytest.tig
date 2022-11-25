@@ -1,7 +1,7 @@
 let 
-    var a := 1
-    function g(a:int) : int = 
-		a
+    type t = {a:int, b:int}
+	var x := t{a = 3, b = 4}
 in 
-    printi(g(a+1))
+    printi(x.a);
+    print("\n")
 end

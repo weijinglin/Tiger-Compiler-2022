@@ -200,6 +200,10 @@ void MoveStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
       return;
     }
 
+  } else {
+    instr_list.Append(new assem::OperInstr("movq  `s0,(`d0)\n",new temp::TempList(static_cast<tree::MemExp*>(this->dst_)->exp_->Munch(instr_list,fs)),
+      new temp::TempList(this->src_->Munch(instr_list,fs)),nullptr));
+      return;
   }
 }
 
@@ -282,7 +286,15 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       new temp::TempList(this->left_->Munch(instr_list,fs)),nullptr));
       return res;
     } else if(dynamic_cast<tree::MemExp*>(this->left_) != nullptr){
-      printf("error\n");
+      temp::Temp* res = temp::TempFactory::NewTemp();
+      temp::TempList* bin_op = new temp::TempList(this->right_->Munch(instr_list,fs));
+      instr_list.Append(new assem::OperInstr("movq  `s0,`d0\n",new temp::TempList(res),
+      bin_op,nullptr));
+
+      instr_list.Append(new assem::OperInstr("addq  `s0,`d0\n",new temp::TempList(res),
+      new temp::TempList(this->left_->Munch(instr_list,fs)),nullptr));
+
+      return res;
       return nullptr;
     } else if(dynamic_cast<tree::ConstExp*>(this->left_) != nullptr){
       // load data from memory to register
@@ -315,45 +327,45 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       // TODO(wjl) : here just use a simple case , don't care the memory visit
       // TODO(wjl) : attention : be careful for not effect the value of op register
       if(dynamic_cast<tree::TempExp*>(this->left_) != nullptr){
-        temp::TempList* left_op = new temp::TempList(this->left_->Munch(instr_list,fs));
-        temp::Temp* right_reg = this->right_->Munch(instr_list,fs);
+        temp::TempList* right_op = new temp::TempList(this->right_->Munch(instr_list,fs));
+        temp::Temp* left_reg = this->left_->Munch(instr_list,fs);
         
         temp::Temp* res = temp::TempFactory::NewTemp();
         instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n",new temp::TempList(res),
-        new temp::TempList(right_reg)));
+        new temp::TempList(left_reg)));
 
-        left_op->Append(res);
+        right_op->Append(res);
         instr_list.Append(new assem::OperInstr("subq  `s0,`d0\n", new temp::TempList(res),
-        left_op,nullptr));
+        right_op,nullptr));
         // right_reg is the register which is returned
         return res;
 
       } else if(dynamic_cast<tree::MemExp*>(this->left_) != nullptr){
         // TODO(wjl) : this case can be opted (can reduce the num of register used in program)
-        temp::TempList* left_op = new temp::TempList(this->left_->Munch(instr_list,fs));
-        temp::Temp* right_reg = this->right_->Munch(instr_list,fs);
+        temp::TempList* right_op = new temp::TempList(this->right_->Munch(instr_list,fs));
+        temp::Temp* left_reg = this->left_->Munch(instr_list,fs);
 
         temp::Temp* res = temp::TempFactory::NewTemp();
         instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n",new temp::TempList(res),
-        new temp::TempList(right_reg)));
+        new temp::TempList(left_reg)));
 
-        left_op->Append(res);
+        right_op->Append(res);
         instr_list.Append(new assem::OperInstr("subq  `s0,`d0\n", new temp::TempList(res),
-        left_op,nullptr));
+        right_op,nullptr));
         // right_reg is the register which is returned
         return res;
 
       } else if(dynamic_cast<tree::ConstExp*>(this->left_) != nullptr){
-        temp::TempList* left_op = new temp::TempList(this->left_->Munch(instr_list,fs));
-        temp::Temp* right_reg = this->right_->Munch(instr_list,fs);
+        temp::TempList* right_op = new temp::TempList(this->right_->Munch(instr_list,fs));
+        temp::Temp* left_reg = this->left_->Munch(instr_list,fs);
 
         temp::Temp* res = temp::TempFactory::NewTemp();
         instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n",new temp::TempList(res),
-        new temp::TempList(right_reg)));
+        new temp::TempList(left_reg)));
 
-        left_op->Append(res);
+        right_op->Append(res);
         instr_list.Append(new assem::OperInstr("subq  $" + std::to_string(static_cast<tree::ConstExp*>(this->left_)->consti_) 
-        + ",`d0\n",new temp::TempList(res), left_op,nullptr));
+        + ",`d0\n",new temp::TempList(res), right_op,nullptr));
         // right_reg is the register which is returned
 
         return res;
@@ -364,27 +376,26 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
     } else if(dynamic_cast<tree::TempExp*>(this->left_) != nullptr){
       // in this case , left_ can't be mem
       // load data from memory to register
-      temp::TempList* mem_list = new temp::TempList(this->right_->Munch(instr_list,fs));
+      temp::TempList* left_op = new temp::TempList(this->left_->Munch(instr_list,fs));
       temp::Temp* res = temp::TempFactory::NewTemp();
       instr_list.Append(new assem::OperInstr("movq  `s0,`d0\n",new temp::TempList(res),
-      mem_list,nullptr));
+      left_op,nullptr));
 
       instr_list.Append(new assem::OperInstr("subq  `s0,`d0\n",new temp::TempList(res),
-      new temp::TempList(this->left_->Munch(instr_list,fs)),nullptr));
+      new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
       return res;
     } else if(dynamic_cast<tree::MemExp*>(this->left_) != nullptr){
       printf("error\n");
       return nullptr;
     } else if(dynamic_cast<tree::ConstExp*>(this->left_) != nullptr){
       // load data from memory to register
-      temp::TempList* mem_list = new temp::TempList(this->right_->Munch(instr_list,fs));
+      temp::TempList* left_op = new temp::TempList(this->left_->Munch(instr_list,fs));
       temp::Temp* res = temp::TempFactory::NewTemp();
       instr_list.Append(new assem::OperInstr("movq  `s0,`d0\n",new temp::TempList(res),
-      mem_list,nullptr));
+      left_op,nullptr));
 
-      instr_list.Append(new assem::OperInstr("subq  $" + std::to_string(static_cast<tree::ConstExp*>(this->left_)->consti_) 
-      + ",`d0\n",new temp::TempList(res),
-      nullptr,nullptr));
+      instr_list.Append(new assem::OperInstr("subq  `s0,`d0\n",new temp::TempList(res),
+      new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
       
       return res;
     } else {
@@ -512,6 +523,12 @@ temp::Temp *MemExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
         ) + "(`s0),`d0",new temp::TempList(res),
         new temp::TempList(static_cast<tree::BinopExp*>(this->exp_)->right_->Munch(instr_list,fs)),nullptr));
         return res;
+      } else {
+        // normal case
+        temp::Temp* res = temp::TempFactory::NewTemp();
+        instr_list.Append(new assem::MoveInstr("movq  (`s0),`d0\n", new temp::TempList(res),
+        new temp::TempList(this->exp_->Munch(instr_list, fs))));
+        return res;
       }
     } else {
       // movq (reg),res
@@ -581,6 +598,7 @@ temp::Temp *CallExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
   // temp::Temp* fun = this->fun_->Munch(instr_list,fs);
   // TODO(wjl) : tiger don't exist function embedded
+  printf("into call\n");
   temp::Temp* fun = temp::TempFactory::NewTemp();
   std::string *fun_name = new std::string(static_cast<tree::NameExp*>(this->fun_)->name_->Name());
   reg_manager->temp_map_->Enter(fun,fun_name);
@@ -615,6 +633,7 @@ temp::TempList *ExpList::MunchArgs(assem::InstrList &instr_list, std::string_vie
       iter++;
     } else {
       // store to the stack
+      // TODO(wjl) : may be buggy
       instr_list.Append(new assem::OperInstr("movq  `s0, "+ std::to_string((counter - 5) * 8) + "(%rsp)",nullptr,
       new temp::TempList(item),nullptr));
     }

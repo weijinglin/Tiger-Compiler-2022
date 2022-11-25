@@ -240,7 +240,7 @@ tr::ExpAndTy *FieldVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   // TODO(wjl): there may be buggy because of the type convert
   type::RecordTy* con_record_ty = static_cast<type::RecordTy*>(record_ty);
   std::list<type::Field *> fie_list = con_record_ty->fields_->GetList();
-  int counter = 1;
+  int counter = 0;
   bool is_find = false;
   type::Ty* last_ty;
 
@@ -261,7 +261,7 @@ tr::ExpAndTy *FieldVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   // construct the offset
   tree::BinopExp *rec_off = new tree::BinopExp(tree::BinOp::MUL_OP,new tree::ConstExp(counter),new tree::ConstExp(reg_manager->WordSize()));
   // construct the base
-  tree::MemExp *base_ = new tree::MemExp(mid_res->exp_->UnEx());
+  tree::Exp *base_ = mid_res->exp_->UnEx();
 
   tree::MemExp* last_ = new tree::MemExp(new tree::BinopExp(tree::BinOp::PLUS_OP, base_, rec_off));
 
@@ -657,7 +657,6 @@ tr::ExpAndTy *AssignExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                    tr::Level *level, temp::Label *label,                       
                                    err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
-  // TODO(wjl) : how to deal with assign's not return value ?
   tr::ExpAndTy* left_val = this->var_->Translate(venv,tenv,level,label,errormsg);
   tr::ExpAndTy* rig_val = this->exp_->Translate(venv,tenv,level,label,errormsg);
 
@@ -1127,6 +1126,7 @@ tr::Exp *VarDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
 
     tr::ExpAndTy* res =  this->init_->Translate(venv,tenv,level,label,errormsg);
 
+    // move the output of the function to the core pos(may be stack or register)
     tree::Stm* out_stm = new tree::MoveStm(var_exp, res->exp_->UnEx());
 
     venv->Enter(this->var_, new env::VarEntry(var_acc,res->ty_,false));
