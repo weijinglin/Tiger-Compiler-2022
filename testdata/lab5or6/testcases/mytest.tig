@@ -1,7 +1,8 @@
 let 
-    type intArray = array of int
-    var x := intArray [ 10 ] of 0
-in 
-    printi(x[0]);
-    print("\n")
+	var N := 8
+in
+	(for i := 0 to N - 1
+		do (print("aaaaaa");
+			print("\n"));
+	print("test"))
 end

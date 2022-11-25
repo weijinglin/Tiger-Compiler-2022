@@ -137,11 +137,11 @@ void ProgTr::Translate() {
   frags->PushBack(new frame::ProcFrag(frame::procEntryExit1(main_level_.get()->frame_,res->exp_->UnNx()),this->main_level_.get()->frame_));
 
   // debug code 
-  for(auto frag : frags->GetList()){
-    if(dynamic_cast<frame::ProcFrag*>(frag) != nullptr){
-      static_cast<frame::ProcFrag*>(frag)->body_->Print(stderr,1);
-    }
-  }
+  // for(auto frag : frags->GetList()){
+  //   if(dynamic_cast<frame::ProcFrag*>(frag) != nullptr){
+  //     static_cast<frame::ProcFrag*>(frag)->body_->Print(stderr,1);
+  //   }
+  // }
 }
 
 } // namespace tr
@@ -284,7 +284,7 @@ tr::ExpAndTy *SubscriptVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   }
   e = new tr::ExExp(mid_res->exp_->UnEx());
 
-  tree::MemExp* arr_fir = new tree::MemExp(e->exp_);
+  tree::Exp* arr_fir = e->exp_;
   tree::BinopExp* arr_off = new tree::BinopExp(tree::BinOp::MUL_OP, sub_res->exp_->UnEx(), new tree::ConstExp(reg_manager->WordSize()));
   tree::MemExp* last_res = new tree::MemExp(new tree::BinopExp(
     tree::BinOp::PLUS_OP,arr_fir,arr_off
@@ -334,7 +334,6 @@ tr::ExpAndTy *CallExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                  err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
   // need to push the static link to the first formals
-  printf("into call_exp\n");
   tree::Exp* fun_name = new tree::NameExp(this->func_);
   tree::ExpList* args = new tree::ExpList();
   env::EnvEntry *fun_entry = venv->Look(this->func_);
@@ -650,27 +649,56 @@ tr::ExpAndTy *SeqExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     res_list.push_back(exp->Translate(venv,tenv,level,label,errormsg));
   }
 
-  // construct the seq_stm
-  tree::Exp* con_exp = res_list.back()->exp_->UnEx();
+  // TODO(wjl) : using another method to code
+  // build the stm first
   auto iter = res_list.end();
   iter--;
   iter--;
-  int counter = 0;
   if(res_list.size() > 1){
-    while(true){
-      con_exp = new tree::EseqExp(new tree::ExpStm((*iter)->exp_->UnEx()),con_exp);
-      if(iter == res_list.begin()){
-        break;
+    tree::Stm* all_stm = (*iter)->exp_->UnNx();
+    iter--;
+    if(res_list.size() > 2){
+      while(true){
+        all_stm = new tree::SeqStm((*iter)->exp_->UnNx(),all_stm);
+        if(iter == res_list.begin()){
+          break;
+        }
+        iter--;
       }
-      iter--;
     }
-    return new tr::ExpAndTy(new tr::ExExp(con_exp),res_list.back()->ty_);
+    
+    // build the res
+    tree::EseqExp* res = new tree::EseqExp(all_stm,res_list.back()->exp_->UnEx());
+    return new tr::ExpAndTy(new tr::ExExp(res),res_list.back()->ty_);
   } else if(res_list.size() == 1){
     return new tr::ExpAndTy(new tr::ExExp(res_list.back()->exp_->UnEx()),res_list.back()->ty_);
   } else {
     printf("error let body is 0\n");
     return nullptr;
   }
+
+
+  // construct the seq_stm
+  // tree::Exp* con_exp = res_list.back()->exp_->UnEx();
+  // auto iter = res_list.end();
+  // iter--;
+  // iter--;
+  // int counter = 0;
+  // if(res_list.size() > 1){
+  //   while(true){
+  //     con_exp = new tree::EseqExp(new tree::ExpStm((*iter)->exp_->UnEx()),con_exp);
+  //     if(iter == res_list.begin()){
+  //       break;
+  //     }
+  //     iter--;
+  //   }
+  //   return new tr::ExpAndTy(new tr::ExExp(con_exp),res_list.back()->ty_);
+  // } else if(res_list.size() == 1){
+  //   return new tr::ExpAndTy(new tr::ExExp(res_list.back()->exp_->UnEx()),res_list.back()->ty_);
+  // } else {
+  //   printf("error let body is 0\n");
+  //   return nullptr;
+  // }
 }
 
 tr::ExpAndTy *AssignExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
@@ -874,7 +902,7 @@ tr::ExpAndTy *ForExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   tree::Exp* low_lim = this->lo_->Translate(venv,tenv,level,label,errormsg)->exp_->UnEx(); 
   // predefine some condition jump
   tree::CjumpStm* cx_1 = new tree::CjumpStm(tree::RelOp::GT_OP,
-  iter_val,limit_, tr_fir,fal_fir);
+  iter_val, limit_, tr_fir,fal_fir);
   tree::CjumpStm* cx_2 = new tree::CjumpStm(tree::RelOp::EQ_OP,
   iter_val, limit_, tr_sec, Loop);
   tree::CjumpStm* cx_3 = new tree::CjumpStm(tree::RelOp::LE_OP,
@@ -884,7 +912,12 @@ tr::ExpAndTy *ForExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   tree::Stm* goto_done = new tree::JumpStm(new tree::NameExp(done_), new std::vector<temp::Label*>({done_}));
 
   // body
-  tree::Stm* body_ = this->body_->Translate(venv,tenv,level,done_,errormsg)->exp_->UnNx();
+  tree::Stm* body_fix = this->body_->Translate(venv,tenv,level,done_,errormsg)->exp_->UnNx();
+
+  //debug code
+  printf("look for body\n");
+  body_fix->Print(stderr,1);
+  printf("\n\n");
 
   tree::Stm* inner_loop = new tree::SeqStm(
     cx_1,
@@ -895,7 +928,7 @@ tr::ExpAndTy *ForExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
         new tree::SeqStm(
           new tree::LabelStm(fal_fir),
           new tree::SeqStm(
-            body_,
+            body_fix,
             new tree::SeqStm(
               cx_2,
               new tree::SeqStm(
@@ -907,7 +940,7 @@ tr::ExpAndTy *ForExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                     new tree::SeqStm(
                       new tree::MoveStm(iter_val, new tree::BinopExp(tree::BinOp::PLUS_OP,iter_val,new tree::ConstExp(1))),
                       new tree::SeqStm(
-                        body_,
+                        body_fix,
                         new tree::SeqStm(
                           cx_3,
                           new tree::SeqStm(
@@ -1010,7 +1043,8 @@ tr::ExpAndTy *ArrayExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
 
   // build the Temp to store the last return value
   temp::Temp *ans = temp::TempFactory::NewTemp();
-
+  // TODO(wjl) : may be buggy ! can be replaced bt toExp() (because it doesn't store in register actually)
+  // TODO(wjl) : unnecessary , because the variable has been allocated in the assign exp
   tree::Stm* move_stm = new tree::MoveStm(new tree::TempExp(ans),_call);
 
   // TODO(wjl) : array type or one primitive type
