@@ -271,7 +271,18 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
 
         return res;
       } else {
-        printf("unexpected type in binop\n");
+        temp::TempList* left_op = new temp::TempList(this->left_->Munch(instr_list,fs));
+        temp::Temp* right_reg = this->right_->Munch(instr_list,fs);
+        
+        temp::Temp* res = temp::TempFactory::NewTemp();
+        instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n",new temp::TempList(res),
+        new temp::TempList(right_reg)));
+
+        left_op->Append(res);
+        instr_list.Append(new assem::OperInstr("addq  `s0,`d0\n", new temp::TempList(res),
+        left_op,nullptr));
+        // right_reg is the register which is returned
+        return res;
       }
       return nullptr;
     } else if(dynamic_cast<tree::TempExp*>(this->left_) != nullptr){
@@ -308,8 +319,18 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
 
       return res;
     } else {
-      printf("unexpected type\n");
-      return nullptr;
+      temp::TempList* left_op = new temp::TempList(this->left_->Munch(instr_list,fs));
+      temp::Temp* right_reg = this->right_->Munch(instr_list,fs);
+      
+      temp::Temp* res = temp::TempFactory::NewTemp();
+      instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n",new temp::TempList(res),
+      new temp::TempList(right_reg)));
+
+      left_op->Append(res);
+      instr_list.Append(new assem::OperInstr("addq  `s0,`d0\n", new temp::TempList(res),
+      left_op,nullptr));
+      // right_reg is the register which is returned
+      return res;
     }
     break;
   }
@@ -369,7 +390,19 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
 
         return res;
       } else {
-        printf("unexpected type in binop\n");
+        // normal case
+        temp::TempList* right_op = new temp::TempList(this->right_->Munch(instr_list,fs));
+        temp::Temp* left_reg = this->left_->Munch(instr_list,fs);
+        
+        temp::Temp* res = temp::TempFactory::NewTemp();
+        instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n",new temp::TempList(res),
+        new temp::TempList(left_reg)));
+
+        right_op->Append(res);
+        instr_list.Append(new assem::OperInstr("subq  `s0,`d0\n", new temp::TempList(res),
+        right_op,nullptr));
+        // right_reg is the register which is returned
+        return res;
       }
       return nullptr;
     } else if(dynamic_cast<tree::TempExp*>(this->left_) != nullptr){
@@ -405,8 +438,18 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       
       return res;
     } else {
-      printf("unexpected type\n");
-      return nullptr;
+      temp::TempList* right_op = new temp::TempList(this->right_->Munch(instr_list,fs));
+      temp::Temp* left_reg = this->left_->Munch(instr_list,fs);
+      
+      temp::Temp* res = temp::TempFactory::NewTemp();
+      instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n",new temp::TempList(res),
+      new temp::TempList(left_reg)));
+
+      right_op->Append(res);
+      instr_list.Append(new assem::OperInstr("subq  `s0,`d0\n", new temp::TempList(res),
+      right_op,nullptr));
+      // right_reg is the register which is returned
+      return res;
     }
     break;
   }
@@ -434,10 +477,10 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
 
     if(dynamic_cast<tree::TempExp*>(this->right_) != nullptr){
       // TODO(wjl) : may be buggy because leaving the dst nullptr
-      instr_list.Append(new assem::OperInstr("imulq s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
+      instr_list.Append(new assem::OperInstr("imulq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
-      instr_list.Append(new assem::MoveInstr("movq  %rax, d0", new temp::TempList(res),nullptr));
+      instr_list.Append(new assem::MoveInstr("movq  %rax, `d0", new temp::TempList(res),nullptr));
       return res;
     } else if(dynamic_cast<tree::MemExp*>(this->right_) != nullptr){
       instr_list.Append(new assem::OperInstr("imulq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
@@ -647,7 +690,7 @@ temp::TempList *ExpList::MunchArgs(assem::InstrList &instr_list, std::string_vie
     } else {
       // store to the stack
       // TODO(wjl) : may be buggy
-      instr_list.Append(new assem::OperInstr("movq  `s0, "+ std::to_string((counter - 5) * 8) + "(%rsp)",nullptr,
+      instr_list.Append(new assem::OperInstr("movq  `s0, "+ std::to_string((counter - 6) * 8) + "(%rsp)",nullptr,
       new temp::TempList(item),nullptr));
     }
     counter++;

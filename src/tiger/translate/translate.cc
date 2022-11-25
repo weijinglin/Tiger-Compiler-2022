@@ -341,27 +341,47 @@ tr::ExpAndTy *CallExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   // TODO(wjl) : find a bug (external function should not pass static link)
   if(static_cast<env::FunEntry*>(fun_entry)->label_ == nullptr){
     // external function
+    // TODO(wjl) : preallocate the pos for the outbound params
+    int counter = 0;
     for(auto arg : this->args_->GetList()){
+      counter++;
       tr::ExpAndTy* mid_res = arg->Translate(venv,tenv,level,label,errormsg);
       args->Append(mid_res->exp_->UnEx());
+    }
+    if(counter > 6){
+      level->frame_->frame_size += (counter - 6) * 8;
     }
   } else {
     if(label == this->func_){
       // transfer static link
+      // TODO(wjl) : preallocate the pos for the outbound params
+      int counter = 0;
       frame::Access* static_acc = level->frame_->formals_->front();
       tree::Exp* static_exp = static_acc->ToExp(new tree::TempExp(reg_manager->FramePointer()));
       args->Append(static_exp);
       for(auto arg : this->args_->GetList()){
+        counter++;
         tr::ExpAndTy* mid_res = arg->Translate(venv,tenv,level,label,errormsg);
         args->Append(mid_res->exp_->UnEx());
       }
+      if(counter > 6){
+        // count the static link
+        level->frame_->frame_size += (counter - 5) * 8;
+      }
     } else {
       // transfer the frame pointer
+      // TODO(wjl) : preallocate the pos for the outbound params
+      int counter = 0;
       tree::Exp* static_exp = new tree::TempExp(reg_manager->FramePointer());
       args->Append(static_exp);
       for(auto arg : this->args_->GetList()){
+        counter++;
         tr::ExpAndTy* mid_res = arg->Translate(venv,tenv,level,label,errormsg);
         args->Append(mid_res->exp_->UnEx());
+      }
+      if(counter > 6){
+        // count the static link
+        level->frame_->frame_size += (counter - 5) * 8;
       }
     }
   }

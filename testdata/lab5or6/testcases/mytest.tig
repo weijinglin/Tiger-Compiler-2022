@@ -1,7 +1,7 @@
 let 
-    type t = {a:int, b:int}
-	var x := t{a = 3, b = 4}
+    type intArray = array of int
+    var x := intArray [ 10 ] of 0
 in 
-    printi(x.a);
+    printi(x[0]);
     print("\n")
 end
