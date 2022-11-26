@@ -63,9 +63,19 @@ public:
   }
   [[nodiscard]] Cx UnCx(err::ErrorMsg *errormsg) override {
     /* TODO: Put your lab5 code here */
-    tr::PatchList *trues = new tr::PatchList();
-    tr::PatchList *falses = new tr::PatchList();
-    Cx* res =  new tr::Cx(*trues,*falses,this->UnNx());
+    // tr::PatchList *trues = new tr::PatchList();
+    // tr::PatchList *falses = new tr::PatchList();
+    // Cx* res =  new tr::Cx(*trues,*falses,this->UnNx());
+    // return *res;
+    tree::CjumpStm *stm = new tree::CjumpStm(tree::RelOp::NE_OP, exp_, new tree::ConstExp(0), nullptr, nullptr);
+    std::list<temp::Label **> tr_pa;
+    std::list<temp::Label **> fa_pa;
+    tr_pa.push_back(&(stm->true_label_));
+    fa_pa.push_back(&(stm->false_label_));
+    tr::PatchList *trues = new tr::PatchList(tr_pa);
+    tr::PatchList *falses = new tr::PatchList(fa_pa);
+
+    Cx* res =  new tr::Cx(*trues,*falses,stm);
     return *res;
   }
 };
@@ -485,17 +495,33 @@ tr::ExpAndTy *OpExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   
   case absyn::Oper::EQ_OP:
   {
-    // TODO(wjl) : left true_label and false_label empty (may be buggy)
-    tree::Stm* last_ = new tree::CjumpStm(tree::RelOp::EQ_OP,
-    left_res->exp_->UnEx(),right_res->exp_->UnEx(),nullptr,nullptr);
-    std::list<temp::Label **> pat_trues;
-    std::list<temp::Label **> pat_falses;
-    pat_trues.push_back(&(static_cast<tree::CjumpStm*>(last_)->true_label_));
-    pat_falses.push_back(&(static_cast<tree::CjumpStm*>(last_)->false_label_));
-    tr::PatchList *trues = new tr::PatchList(pat_trues);
-    tr::PatchList *falses = new tr::PatchList(pat_falses);
-    return new tr::ExpAndTy(new tr::CxExp(*trues,*falses,last_),type::IntTy::Instance());
-    break;
+    // TODO(wjl) : left true_label and false_label empty (may be buggy) 
+    // TODO(wjl) : add the model to deal with the string compare
+    if(left_res->ty_->IsSameType(type::StringTy::Instance())){
+      tree::ExpList* args = new tree::ExpList({left_res->exp_->UnEx(),right_res->exp_->UnEx()});
+
+      tree::Stm* last_ = new tree::CjumpStm(tree::RelOp::EQ_OP,
+      frame::externalCall("string_equal",args),new tree::ConstExp(1),nullptr,nullptr);
+      std::list<temp::Label **> pat_trues;
+      std::list<temp::Label **> pat_falses;
+      pat_trues.push_back(&(static_cast<tree::CjumpStm*>(last_)->true_label_));
+      pat_falses.push_back(&(static_cast<tree::CjumpStm*>(last_)->false_label_));
+      tr::PatchList *trues = new tr::PatchList(pat_trues);
+      tr::PatchList *falses = new tr::PatchList(pat_falses);
+      return new tr::ExpAndTy(new tr::CxExp(*trues,*falses,last_),type::IntTy::Instance());
+      break;
+    } else {
+      tree::Stm* last_ = new tree::CjumpStm(tree::RelOp::EQ_OP,
+      left_res->exp_->UnEx(),right_res->exp_->UnEx(),nullptr,nullptr);
+      std::list<temp::Label **> pat_trues;
+      std::list<temp::Label **> pat_falses;
+      pat_trues.push_back(&(static_cast<tree::CjumpStm*>(last_)->true_label_));
+      pat_falses.push_back(&(static_cast<tree::CjumpStm*>(last_)->false_label_));
+      tr::PatchList *trues = new tr::PatchList(pat_trues);
+      tr::PatchList *falses = new tr::PatchList(pat_falses);
+      return new tr::ExpAndTy(new tr::CxExp(*trues,*falses,last_),type::IntTy::Instance());
+      break;
+    }
   } 
   case absyn::Oper::GE_OP:
   {
@@ -556,16 +582,32 @@ tr::ExpAndTy *OpExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   case absyn::Oper::NEQ_OP:
  {
     // TODO(wjl) : left true_label and false_label empty (may be buggy)
-    tree::Stm* last_ = new tree::CjumpStm(tree::RelOp::NE_OP,
-    left_res->exp_->UnEx(),right_res->exp_->UnEx(),nullptr,nullptr);
-    std::list<temp::Label **> pat_trues;
-    std::list<temp::Label **> pat_falses;
-    pat_trues.push_back(&(static_cast<tree::CjumpStm*>(last_)->true_label_));
-    pat_falses.push_back(&(static_cast<tree::CjumpStm*>(last_)->false_label_));
-    tr::PatchList *trues = new tr::PatchList(pat_trues);
-    tr::PatchList *falses = new tr::PatchList(pat_falses);
-    return new tr::ExpAndTy(new tr::CxExp(*trues,*falses,last_),type::IntTy::Instance());
-    break;
+    // TODO(wjl) : add the model to deal with the string compare
+    if(left_res->ty_->IsSameType(type::StringTy::Instance())){
+      tree::ExpList* args = new tree::ExpList({left_res->exp_->UnEx(),right_res->exp_->UnEx()});
+
+      tree::Stm* last_ = new tree::CjumpStm(tree::RelOp::NE_OP,
+      frame::externalCall("string_equal",args),new tree::ConstExp(1),nullptr,nullptr);
+      std::list<temp::Label **> pat_trues;
+      std::list<temp::Label **> pat_falses;
+      pat_trues.push_back(&(static_cast<tree::CjumpStm*>(last_)->true_label_));
+      pat_falses.push_back(&(static_cast<tree::CjumpStm*>(last_)->false_label_));
+      tr::PatchList *trues = new tr::PatchList(pat_trues);
+      tr::PatchList *falses = new tr::PatchList(pat_falses);
+      return new tr::ExpAndTy(new tr::CxExp(*trues,*falses,last_),type::IntTy::Instance());
+      break;
+    } else {
+      tree::Stm* last_ = new tree::CjumpStm(tree::RelOp::NE_OP,
+      left_res->exp_->UnEx(),right_res->exp_->UnEx(),nullptr,nullptr);
+      std::list<temp::Label **> pat_trues;
+      std::list<temp::Label **> pat_falses;
+      pat_trues.push_back(&(static_cast<tree::CjumpStm*>(last_)->true_label_));
+      pat_falses.push_back(&(static_cast<tree::CjumpStm*>(last_)->false_label_));
+      tr::PatchList *trues = new tr::PatchList(pat_trues);
+      tr::PatchList *falses = new tr::PatchList(pat_falses);
+      return new tr::ExpAndTy(new tr::CxExp(*trues,*falses,last_),type::IntTy::Instance());
+      break;
+    }
   } 
   default:
     printf("don't take care of all case in OpExp\n");
@@ -588,7 +630,7 @@ tr::ExpAndTy *RecordExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   // call the external function
   // first , prepare for the params
   int counter = exp_list->size();
-  tree::ConstExp* _size = new tree::ConstExp(counter);
+  tree::ConstExp* _size = new tree::ConstExp(counter * reg_manager->WordSize());
 
   // TODO(wjl) : may be buggy (external call)
   tree::Exp* _call = frame::externalCall("alloc_record",new tree::ExpList({_size}));
@@ -720,6 +762,8 @@ tr::ExpAndTy *IfExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   printf("into if\n");
   tr::ExpAndTy* test_ = this->test_->Translate(venv,tenv,level,label,errormsg);
 
+  tr::Cx test_im = test_->exp_->UnCx(errormsg);
+
   temp::Label* _true = temp::LabelFactory::NewLabel();
   temp::Label* _false = temp::LabelFactory::NewLabel();
 
@@ -741,11 +785,11 @@ tr::ExpAndTy *IfExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   if(this->elsee_){
     tr::ExpAndTy* false_exp = this->elsee_->Translate(venv,tenv,level,label,errormsg);
     tree::MoveStm* false_mov = new tree::MoveStm(new tree::TempExp(res),false_exp->exp_->UnEx());
-    test_->exp_->UnCx(errormsg).falses_.DoPatch(_false);
-    test_->exp_->UnCx(errormsg).trues_.DoPatch(_true);
+    test_im.falses_.DoPatch(_false);
+    test_im.trues_.DoPatch(_true);
     if(!is_void){
       all_ = new tree::SeqStm(
-        test_->exp_->UnCx(errormsg).stm_,
+        test_im.stm_,
         new tree::SeqStm(
           new tree::LabelStm(_true),
           new tree::SeqStm(
@@ -767,7 +811,7 @@ tr::ExpAndTy *IfExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
         ));
     } else {
       all_ = new tree::SeqStm(
-        test_->exp_->UnCx(errormsg).stm_,
+        test_im.stm_,
         new tree::SeqStm(
           new tree::LabelStm(_true),
           new tree::SeqStm(
@@ -790,11 +834,11 @@ tr::ExpAndTy *IfExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     }
   } else {
     // TODO(wjl) : here may be too redundancy
-    test_->exp_->UnCx(errormsg).falses_.DoPatch(_false);
-    test_->exp_->UnCx(errormsg).trues_.DoPatch(_true);
+    test_im.falses_.DoPatch(_false);
+    test_im.trues_.DoPatch(_true);
     if(is_void){
       all_ = new tree::SeqStm(
-        test_->exp_->UnCx(errormsg).stm_,
+        test_im.stm_,
         new tree::SeqStm(
           new tree::LabelStm(_true),
           new tree::SeqStm(
@@ -812,7 +856,7 @@ tr::ExpAndTy *IfExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
       )));
     } else {
       all_ = new tree::SeqStm(
-        test_->exp_->UnCx(errormsg).stm_,
+        test_im.stm_,
         new tree::SeqStm(
           new tree::LabelStm(_true),
           new tree::SeqStm(
@@ -847,12 +891,15 @@ tr::ExpAndTy *WhileExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   temp::Label* true_ = temp::LabelFactory::NewLabel();
   temp::Label* false_ = temp::LabelFactory::NewLabel();
   tr::ExpAndTy* _test = this->test_->Translate(venv,tenv,level,label,errormsg);
-  _test->exp_->UnCx(errormsg).falses_.DoPatch(false_);
-  _test->exp_->UnCx(errormsg).trues_.DoPatch(true_);
+  tr::Cx test_cx = _test->exp_->UnCx(errormsg);
+  test_cx.falses_.DoPatch(false_);
+  test_cx.trues_.DoPatch(true_);
+  printf("test for while\n");
+  test_cx.stm_->Print(stderr,1);
   tree::Stm* while_stm = new tree::SeqStm(
     new tree::LabelStm(begin_),
     new tree::SeqStm(
-      _test->exp_->UnCx(errormsg).stm_,
+      test_cx.stm_,
       new tree::SeqStm(
         new tree::LabelStm(false_),
         new tree::SeqStm(
