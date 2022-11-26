@@ -83,7 +83,7 @@ public:
     counter++;
   }
 
-  // save callee saved registers
+  // // save callee saved registers
   // std::list<temp::Temp*> save_regs = reg_manager->CalleeSaves()->GetList();
   // std::list<frame::Access*> acc_list; 
   // for(auto reg : save_regs){
@@ -94,7 +94,7 @@ public:
   //   ),new tree::TempExp(reg)));
   // }
 
-  // restore callee saved registers
+  // // restore callee saved registers
   // auto idx = acc_list.begin();
   // for(auto reg : save_regs){
   //   this->view_shift->push_back(new tree::MoveStm(new tree::TempExp(reg),

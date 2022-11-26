@@ -471,6 +471,9 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
         static_cast<tree::ConstExp*>(this->left_)->consti_
       ) + ", %rax\n",nullptr,new temp::TempList(this->left_->Munch(instr_list,fs)),
       nullptr));
+    } else {
+      instr_list.Append(new assem::OperInstr("movq  `s0, %rax\n",nullptr,new temp::TempList(this->left_->Munch(instr_list,fs)),
+      nullptr));
     }
 
     instr_list.Append(new assem::OperInstr("cqto",nullptr,nullptr,nullptr));
@@ -498,8 +501,13 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       instr_list.Append(new assem::MoveInstr("movq  %rax,`d0", new temp::TempList(res),nullptr));
 
       return res;
-    } 
+    } else {
+      instr_list.Append(new assem::OperInstr("imulq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
 
+      temp::Temp* res = temp::TempFactory::NewTemp();
+      instr_list.Append(new assem::MoveInstr("movq  %rax, `d0", new temp::TempList(res),nullptr));
+      return res;
+    }
     break;
 
   }
@@ -519,6 +527,9 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       instr_list.Append(new assem::OperInstr("movq  $" + std::to_string(
         static_cast<tree::ConstExp*>(this->left_)->consti_
       ) + ", %rax\n",nullptr,new temp::TempList(this->left_->Munch(instr_list,fs)),
+      nullptr));
+    } else {
+      instr_list.Append(new assem::OperInstr("movq  `s0, %rax\n",nullptr,new temp::TempList(this->left_->Munch(instr_list,fs)),
       nullptr));
     }
 
@@ -547,7 +558,13 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       instr_list.Append(new assem::MoveInstr("movq  %rax,`d0", new temp::TempList(res),nullptr));
 
       return res;
-    } 
+    } else {
+      instr_list.Append(new assem::OperInstr("idivq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
+
+      temp::Temp* res = temp::TempFactory::NewTemp();
+      instr_list.Append(new assem::MoveInstr("movq  %rax,`d0", new temp::TempList(res),nullptr));
+      return res;
+    }
 
     break;
 
