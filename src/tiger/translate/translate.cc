@@ -175,10 +175,6 @@ tree::Exp* static_link_com(tr::Level *def_level,tr::Level *use_level){
   // first , get the FP of the use_level
 
   // some debug code
-  printf("def level is %s , and use_level is %s\n",def_level->frame_->name_->Name().c_str(),
-  use_level->frame_->name_->Name().c_str());
-  printf("frame formals size is %d\n",use_level->frame_->formals_->size());
-
   temp::Temp *frame_po = reg_manager->FramePointer();
   if(def_level == use_level){
     return new tree::TempExp(frame_po);
@@ -210,7 +206,6 @@ tr::ExpAndTy *SimpleVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   
   // get the core var by access the venv
   env::EnvEntry* sim_var = venv->Look(this->sym_);
-  printf("parse the var named is %s\n",this->sym_->Name().c_str());
 
   if(sim_var == nullptr){
     printf("simple err be nullptr in venv\n");
@@ -245,7 +240,6 @@ tr::ExpAndTy *FieldVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   // use type to compute the offset of each field
   type::Ty* record_ty = mid_res->ty_->ActualTy();
 
-  printf("test\n");
 
   // TODO(wjl): there may be buggy because of the type convert
   type::RecordTy* con_record_ty = static_cast<type::RecordTy*>(record_ty);
@@ -254,7 +248,6 @@ tr::ExpAndTy *FieldVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   bool is_find = false;
   type::Ty* last_ty;
 
-  printf("here\n");
   for(auto fie : fie_list){
     if(fie->name_ == this->sym_){
       is_find = true;
@@ -497,7 +490,7 @@ tr::ExpAndTy *OpExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   {
     // TODO(wjl) : left true_label and false_label empty (may be buggy) 
     // TODO(wjl) : add the model to deal with the string compare
-    if(left_res->ty_->IsSameType(type::StringTy::Instance())){
+    if(dynamic_cast<type::StringTy*>(left_res->ty_) != nullptr){
       tree::ExpList* args = new tree::ExpList({left_res->exp_->UnEx(),right_res->exp_->UnEx()});
 
       tree::Stm* last_ = new tree::CjumpStm(tree::RelOp::EQ_OP,
@@ -583,7 +576,7 @@ tr::ExpAndTy *OpExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
  {
     // TODO(wjl) : left true_label and false_label empty (may be buggy)
     // TODO(wjl) : add the model to deal with the string compare
-    if(left_res->ty_->IsSameType(type::StringTy::Instance())){
+    if(dynamic_cast<type::StringTy*>(left_res->ty_) != nullptr){
       tree::ExpList* args = new tree::ExpList({left_res->exp_->UnEx(),right_res->exp_->UnEx()});
 
       tree::Stm* last_ = new tree::CjumpStm(tree::RelOp::NE_OP,
@@ -620,7 +613,6 @@ tr::ExpAndTy *RecordExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                    tr::Level *level, temp::Label *label,      
                                    err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
-  printf("record exp\n");
   std::list<absyn::EField*> eFie_list = this->fields_->GetList();
   std::list<tr::ExpAndTy*> *exp_list = new std::list<tr::ExpAndTy*>();
   for(auto efie : eFie_list){
@@ -759,7 +751,6 @@ tr::ExpAndTy *IfExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                tr::Level *level, temp::Label *label,
                                err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
-  printf("into if\n");
   tr::ExpAndTy* test_ = this->test_->Translate(venv,tenv,level,label,errormsg);
 
   tr::Cx test_im = test_->exp_->UnCx(errormsg);
@@ -894,8 +885,6 @@ tr::ExpAndTy *WhileExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   tr::Cx test_cx = _test->exp_->UnCx(errormsg);
   test_cx.falses_.DoPatch(false_);
   test_cx.trues_.DoPatch(true_);
-  printf("test for while\n");
-  test_cx.stm_->Print(stderr,1);
   tree::Stm* while_stm = new tree::SeqStm(
     new tree::LabelStm(begin_),
     new tree::SeqStm(
@@ -954,11 +943,6 @@ tr::ExpAndTy *ForExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
 
   // body
   tree::Stm* body_fix = this->body_->Translate(venv,tenv,level,done_,errormsg)->exp_->UnNx();
-
-  //debug code
-  printf("look for body\n");
-  body_fix->Print(stderr,1);
-  printf("\n\n");
 
   tree::Stm* inner_loop = new tree::SeqStm(
     new tree::LabelStm(test_),new tree::SeqStm(
@@ -1107,12 +1091,6 @@ tr::ExpAndTy *ArrayExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   // TODO(wjl) : array type or one primitive type
   type::Ty* res_ty = tenv->Look(this->typ_)->ActualTy();
 
-  printf("type is %s\n",this->typ_->Name().c_str());
-
-  if(dynamic_cast<type::ArrayTy*>(res_ty) != nullptr){
-    printf("array type is right\n");
-  }
-
   return new tr::ExpAndTy(new tr::ExExp(new tree::EseqExp(move_stm,new tree::TempExp(ans))),res_ty);
 }
 
@@ -1168,7 +1146,6 @@ tr::Exp *FunctionDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     venv->Enter(fun_dec->name_,new_fun);
   }
 
-  printf("can pass first loop\n");
 
   // parse the function body
   // prologue and epilogue is not care in translate stage
@@ -1280,7 +1257,6 @@ type::Ty *RecordTy::Translate(env::TEnvPtr tenv,
   std::list<Field *> all_fie = this->record_->GetList();
   type::FieldList* act_fie = new type::FieldList();
   for(auto fie_ : all_fie){
-    printf("type string is %s\n",fie_->typ_->Name().c_str());
     type::Ty* name_ty = tenv->Look(fie_->typ_);
     if(name_ty){
       act_fie->Append(new type::Field(fie_->name_,name_ty));

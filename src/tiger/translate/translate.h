@@ -92,13 +92,11 @@ public:
         venv_(std::make_unique<env::VEnv>())
   {
     // init the main level , assume the default global function name is main
-    printf("construct start\n");
     temp::Label* main_label = temp::LabelFactory::NamedLabel("tigermain");
     std::list<bool> formals;
     frame::Frame* main_frame = new frame::X64Frame(main_label,formals);
     main_level_.reset(new tr::Level(nullptr,main_frame,0));
 
-    printf("can reach here\n");
 
     // do some init job
     this->FillBaseTEnv();
