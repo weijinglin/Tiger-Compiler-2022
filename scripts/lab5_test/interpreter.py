@@ -154,6 +154,10 @@ class Interpreter(object):
 
     def run(self):
         pc = self._state_table.get_pc()
+        # while pc >= 0:
+        #     print("mytest")
+        #     print(self._program_lines[pc])
+        #     pc = self._state_table.get_pc()
         while pc >= 0:
             # print(pc)
             # print(self._program_lines[pc])
