@@ -23,8 +23,25 @@ void CodeGen::Codegen() {
   assem::InstrList* all_intr = new assem::InstrList();
 
   cg::AssemInstr *res = new cg::AssemInstr(all_intr);
+
+  // callee save register
+  std::list<temp::Temp*> save_regs = reg_manager->CalleeSaves()->GetList();
+  temp::TempList* save_reg = new temp::TempList();
+  for(auto reg : save_regs){
+    temp::Temp* save_temp = temp::TempFactory::NewTemp();
+    save_reg->Append(save_temp);
+    res->GetInstrList()->Append(new assem::MoveInstr("movq  `s0, `d0", new temp::TempList(save_temp), new temp::TempList(reg)));
+  }
+
   for(auto stm_ : stm_list){
     stm_->Munch(*(res->GetInstrList()),this->fs_);
+  }
+
+  // restore callee saved register
+  auto iter = save_reg->GetList().begin();
+  for(auto reg : save_regs){
+    res->GetInstrList()->Append(new assem::MoveInstr("movq  `s0, `d0", new temp::TempList(reg), new temp::TempList(*iter)));
+    iter++;
   }
 
   this->assem_instr_ = std::make_unique<AssemInstr>(frame::ProcEntryExit2(res->GetInstrList()));
@@ -67,12 +84,12 @@ void CjumpStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
   {
     /* code */
     // parse the condition 
-    // TODO(wjl) : bug in Condition may be in translate or here(too conflict)
     temp::Temp* left_ = this->left_->Munch(instr_list,fs);
     temp::Temp* right_ = this->right_->Munch(instr_list,fs);
 
     // construct the compare statement
-    instr_list.Append(new assem::OperInstr("cmpq  `s0,`d0\n",new temp::TempList(left_),new temp::TempList(right_),nullptr));
+    // TODO(wjl) ; fix the dst and src for lab6
+    instr_list.Append(new assem::OperInstr("cmpq  `s0,`s1\n",nullptr,new temp::TempList({right_,left_}),nullptr));
     instr_list.Append(new assem::OperInstr("je  `j0\n",nullptr,nullptr,new assem::Targets(new std::vector<temp::Label*>({this->true_label_}))));
     break;
   }
@@ -80,12 +97,12 @@ void CjumpStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
   {
     /* code */
     // parse the condition 
-    // TODO(wjl) : bug in Condition may be in translate or here(too conflict)
     temp::Temp* left_ = this->left_->Munch(instr_list,fs);
     temp::Temp* right_ = this->right_->Munch(instr_list,fs);
 
     // construct the compare statement
-    instr_list.Append(new assem::OperInstr("cmpq  `s0,`d0\n",new temp::TempList(left_),new temp::TempList(right_),nullptr));
+    // TODO(wjl) ; fix the dst and src for lab6
+    instr_list.Append(new assem::OperInstr("cmpq  `s0,`s1\n",nullptr,new temp::TempList({right_,left_}),nullptr));
     instr_list.Append(new assem::OperInstr("jne  `j0\n",nullptr,nullptr,new assem::Targets(new std::vector<temp::Label*>({this->true_label_}))));
     break;
   }
@@ -98,7 +115,8 @@ void CjumpStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
     temp::Temp* right_ = this->right_->Munch(instr_list,fs);
 
     // construct the compare statement
-    instr_list.Append(new assem::OperInstr("cmpq  `s0,`d0\n",new temp::TempList(left_),new temp::TempList(right_),nullptr));
+    // TODO(wjl) ; fix the dst and src for lab6
+    instr_list.Append(new assem::OperInstr("cmpq  `s0,`s1\n",nullptr,new temp::TempList({right_,left_}),nullptr));
     instr_list.Append(new assem::OperInstr("jge  `j0\n",nullptr,nullptr,new assem::Targets(new std::vector<temp::Label*>({this->true_label_}))));
     break;
   }
@@ -111,7 +129,7 @@ void CjumpStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
     temp::Temp* right_ = this->right_->Munch(instr_list,fs);
 
     // construct the compare statement
-    instr_list.Append(new assem::OperInstr("cmpq  `s0,`d0\n",new temp::TempList(left_),new temp::TempList(right_),nullptr));
+    instr_list.Append(new assem::OperInstr("cmpq  `s0,`s1\n",nullptr,new temp::TempList({right_,left_}),nullptr));
     instr_list.Append(new assem::OperInstr("jg  `j0\n",nullptr,nullptr,new assem::Targets(new std::vector<temp::Label*>({this->true_label_}))));
     break;
   }
@@ -124,7 +142,8 @@ void CjumpStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
     temp::Temp* right_ = this->right_->Munch(instr_list,fs);
 
     // construct the compare statement
-    instr_list.Append(new assem::OperInstr("cmpq  `s0,`d0\n",new temp::TempList(left_),new temp::TempList(right_),nullptr));
+    // TODO(wjl) ; fix the dst and src for lab6
+    instr_list.Append(new assem::OperInstr("cmpq  `s0,`s1\n",nullptr,new temp::TempList({right_,left_}),nullptr));
     instr_list.Append(new assem::OperInstr("jle  `j0\n",nullptr,nullptr,new assem::Targets(new std::vector<temp::Label*>({this->true_label_}))));
     break;
   }
@@ -137,7 +156,8 @@ void CjumpStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
     temp::Temp* right_ = this->right_->Munch(instr_list,fs);
 
     // construct the compare statement
-    instr_list.Append(new assem::OperInstr("cmpq  `s0,`d0\n",new temp::TempList(left_),new temp::TempList(right_),nullptr));
+    // TODO(wjl) : bug in Condition may be in translate or here(too conflict)
+    instr_list.Append(new assem::OperInstr("cmpq  `s0,`s1\n",nullptr,new temp::TempList({right_,left_}),nullptr));
     instr_list.Append(new assem::OperInstr("jl  `j0\n",nullptr,nullptr,new assem::Targets(new std::vector<temp::Label*>({this->true_label_}))));
     break;
   }
@@ -191,8 +211,11 @@ void MoveStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
     // case 2 : load from the register
     if(dynamic_cast<tree::MemExp*>(this->dst_) != nullptr){
       // TODO(wjl) : buggy here in function call !!!
-      instr_list.Append(new assem::OperInstr("movq  `s0,(`d0)\n",new temp::TempList(static_cast<tree::MemExp*>(this->dst_)->exp_->Munch(instr_list,fs)),
-      new temp::TempList(this->src_->Munch(instr_list,fs)),nullptr));
+      // instr_list.Append(new assem::OperInstr("movq  `s0,(`d0)\n",new temp::TempList(static_cast<tree::MemExp*>(this->dst_)->exp_->Munch(instr_list,fs)),
+      // new temp::TempList(this->src_->Munch(instr_list,fs)),nullptr));
+      // TODO(wjl) : fix for lab6
+      instr_list.Append(new assem::OperInstr("movq  `s0,(`s1)\n",nullptr,
+      new temp::TempList({this->src_->Munch(instr_list,fs),static_cast<tree::MemExp*>(this->dst_)->exp_->Munch(instr_list,fs)}),nullptr));
       return;
     } else {
       // the case of reg to reg has been cared in the first condition branch
@@ -201,8 +224,11 @@ void MoveStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
     }
 
   } else {
-    instr_list.Append(new assem::OperInstr("movq  `s0,(`d0)\n",new temp::TempList(static_cast<tree::MemExp*>(this->dst_)->exp_->Munch(instr_list,fs)),
-      new temp::TempList(this->src_->Munch(instr_list,fs)),nullptr));
+    // TODO(wjl) : fix for lab6
+    // instr_list.Append(new assem::OperInstr("movq  `s0,(`d0)\n",new temp::TempList(static_cast<tree::MemExp*>(this->dst_)->exp_->Munch(instr_list,fs)),
+    //   new temp::TempList(this->src_->Munch(instr_list,fs)),nullptr));
+    instr_list.Append(new assem::OperInstr("movq  `s0,(`s1)\n",nullptr,
+      new temp::TempList({this->src_->Munch(instr_list,fs),static_cast<tree::MemExp*>(this->dst_)->exp_->Munch(instr_list,fs)}),nullptr));
       return;
   }
 }
@@ -461,18 +487,30 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
     // init the initial register (load data to %rax)
     // TODO(WJL) : not care the case of const
     if(dynamic_cast<tree::TempExp*>(this->left_) != nullptr){
-      instr_list.Append(new assem::OperInstr("movq  `s0, %rax\n",nullptr,new temp::TempList(this->left_->Munch(instr_list,fs)),
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* dst = new temp::TempList();
+      dst->Append(reg_manager->ReturnValue());
+      instr_list.Append(new assem::OperInstr("movq  `s0, `d0\n",dst,new temp::TempList(this->left_->Munch(instr_list,fs)),
       nullptr));
     } else if(dynamic_cast<tree::MemExp*>(this->left_) != nullptr){
-      instr_list.Append(new assem::OperInstr("movq  `s0, %rax\n",nullptr,new temp::TempList(this->left_->Munch(instr_list,fs)),
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* dst = new temp::TempList();
+      dst->Append(reg_manager->ReturnValue());
+      instr_list.Append(new assem::OperInstr("movq  `s0, `d0\n",dst,new temp::TempList(this->left_->Munch(instr_list,fs)),
       nullptr));
     } else if(dynamic_cast<tree::ConstExp*>(this->left_) != nullptr){
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* dst = new temp::TempList();
+      dst->Append(reg_manager->ReturnValue());
       instr_list.Append(new assem::OperInstr("movq  $" + std::to_string(
         static_cast<tree::ConstExp*>(this->left_)->consti_
-      ) + ", %rax\n",nullptr,new temp::TempList(this->left_->Munch(instr_list,fs)),
+      ) + ",`d0\n",dst,new temp::TempList(this->left_->Munch(instr_list,fs)),
       nullptr));
     } else {
-      instr_list.Append(new assem::OperInstr("movq  `s0, %rax\n",nullptr,new temp::TempList(this->left_->Munch(instr_list,fs)),
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* dst = new temp::TempList();
+      dst->Append(reg_manager->ReturnValue());
+      instr_list.Append(new assem::OperInstr("movq  `s0, `d0\n",dst,new temp::TempList(this->left_->Munch(instr_list,fs)),
       nullptr));
     }
 
@@ -483,13 +521,19 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       instr_list.Append(new assem::OperInstr("imulq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
-      instr_list.Append(new assem::MoveInstr("movq  %rax, `d0", new temp::TempList(res),nullptr));
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* src = new temp::TempList();
+      src->Append(reg_manager->ReturnValue());
+      instr_list.Append(new assem::MoveInstr("movq  `s0, `d0", new temp::TempList(res),src));
       return res;
     } else if(dynamic_cast<tree::MemExp*>(this->right_) != nullptr){
       instr_list.Append(new assem::OperInstr("imulq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
-      instr_list.Append(new assem::MoveInstr("movq  %rax,`d0", new temp::TempList(res),nullptr));
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* src = new temp::TempList();
+      src->Append(reg_manager->ReturnValue());
+      instr_list.Append(new assem::MoveInstr("movq  `s0,`d0", new temp::TempList(res),src));
 
       return res;
     } else if(dynamic_cast<tree::ConstExp*>(this->right_) != nullptr){
@@ -498,14 +542,20 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       ) + "\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
-      instr_list.Append(new assem::MoveInstr("movq  %rax,`d0", new temp::TempList(res),nullptr));
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* src = new temp::TempList();
+      src->Append(reg_manager->ReturnValue());
+      instr_list.Append(new assem::MoveInstr("movq  `s0,`d0", new temp::TempList(res),src));
 
       return res;
     } else {
       instr_list.Append(new assem::OperInstr("imulq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
-      instr_list.Append(new assem::MoveInstr("movq  %rax, `d0", new temp::TempList(res),nullptr));
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* src = new temp::TempList();
+      src->Append(reg_manager->ReturnValue());
+      instr_list.Append(new assem::MoveInstr("movq  `s0, `d0", new temp::TempList(res),src));
       return res;
     }
     break;
@@ -518,18 +568,30 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
     // init the initial register (load data to %rax)
     // TODO(WJL) : not care the case of const
     if(dynamic_cast<tree::TempExp*>(this->left_) != nullptr){
-      instr_list.Append(new assem::OperInstr("movq  `s0, %rax\n",nullptr,new temp::TempList(this->left_->Munch(instr_list,fs)),
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* dst = new temp::TempList();
+      dst->Append(reg_manager->ReturnValue());
+      instr_list.Append(new assem::OperInstr("movq  `s0, `d0\n",dst,new temp::TempList(this->left_->Munch(instr_list,fs)),
       nullptr));
     } else if(dynamic_cast<tree::MemExp*>(this->left_) != nullptr){
-      instr_list.Append(new assem::OperInstr("movq  `s0, %rax\n",nullptr,new temp::TempList(this->left_->Munch(instr_list,fs)),
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* dst = new temp::TempList();
+      dst->Append(reg_manager->ReturnValue());
+      instr_list.Append(new assem::OperInstr("movq  `s0, `d0\n",dst,new temp::TempList(this->left_->Munch(instr_list,fs)),
       nullptr));
     } else if(dynamic_cast<tree::ConstExp*>(this->left_) != nullptr){
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* dst = new temp::TempList();
+      dst->Append(reg_manager->ReturnValue());
       instr_list.Append(new assem::OperInstr("movq  $" + std::to_string(
         static_cast<tree::ConstExp*>(this->left_)->consti_
-      ) + ", %rax\n",nullptr,new temp::TempList(this->left_->Munch(instr_list,fs)),
+      ) + ", `d0\n",dst,new temp::TempList(this->left_->Munch(instr_list,fs)),
       nullptr));
     } else {
-      instr_list.Append(new assem::OperInstr("movq  `s0, %rax\n",nullptr,new temp::TempList(this->left_->Munch(instr_list,fs)),
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* dst = new temp::TempList();
+      dst->Append(reg_manager->ReturnValue());
+      instr_list.Append(new assem::OperInstr("movq  `s0, `d0\n",dst,new temp::TempList(this->left_->Munch(instr_list,fs)),
       nullptr));
     }
 
@@ -540,13 +602,19 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       instr_list.Append(new assem::OperInstr("idivq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
-      instr_list.Append(new assem::MoveInstr("movq  %rax,`d0", new temp::TempList(res),nullptr));
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* src = new temp::TempList();
+      src->Append(reg_manager->ReturnValue());
+      instr_list.Append(new assem::MoveInstr("movq  `s0,`d0", new temp::TempList(res),src));
       return res;
     } else if(dynamic_cast<tree::MemExp*>(this->right_) != nullptr){
       instr_list.Append(new assem::OperInstr("idivq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
-      instr_list.Append(new assem::MoveInstr("movq  %rax,`d0", new temp::TempList(res),nullptr));
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* src = new temp::TempList();
+      src->Append(reg_manager->ReturnValue());
+      instr_list.Append(new assem::MoveInstr("movq  `s0,`d0", new temp::TempList(res),src));
 
       return res;
     } else if(dynamic_cast<tree::ConstExp*>(this->right_) != nullptr){
@@ -555,14 +623,20 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       ) + "\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
-      instr_list.Append(new assem::MoveInstr("movq  %rax,`d0", new temp::TempList(res),nullptr));
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* src = new temp::TempList();
+      src->Append(reg_manager->ReturnValue());
+      instr_list.Append(new assem::MoveInstr("movq  `s0,`d0", new temp::TempList(res),src));
 
       return res;
     } else {
       instr_list.Append(new assem::OperInstr("idivq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
-      instr_list.Append(new assem::MoveInstr("movq  %rax,`d0", new temp::TempList(res),nullptr));
+      // TODO(wjl) : replace machine register to temp
+      temp::TempList* src = new temp::TempList();
+      src->Append(reg_manager->ReturnValue());
+      instr_list.Append(new assem::MoveInstr("movq  `s0,`d0", new temp::TempList(res),src));
       return res;
     }
 
@@ -624,7 +698,10 @@ temp::Temp *TempExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
     // replace the register with rsp
     // it is not problem because rbp here is not used except for frame pointer
     temp::Temp* my_rbp = temp::TempFactory::NewTemp();
-    instr_list.Append(new assem::OperInstr("leaq  " + std::string(fs) + "(%rsp),`d0",new temp::TempList(my_rbp),nullptr,nullptr));
+    // TODO(wjl) : replace machine register to temp
+    temp::TempList* src = new temp::TempList();
+    src->Append(reg_manager->StackPointer());
+    instr_list.Append(new assem::OperInstr("leaq  " + std::string(fs) + "(`s0),`d0",new temp::TempList(my_rbp),src,nullptr));
     return my_rbp;
   }
   return this->temp_;
@@ -640,21 +717,22 @@ temp::Temp *NameExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
   // TODO(wjl) : attention : this code is relative to machine(may be buggy in actually x64 frame)
   std::string label_ = this->name_->Name();
-  int length = label_.length();
-  std::string num_str = label_.substr(1,length-1);
-  int num = atoi(num_str.c_str());
+  // int length = label_.length();
+  // std::string num_str = label_.substr(1,length-1);
+  // int num = atoi(num_str.c_str());
   
   temp::Temp* name_tmp = temp::TempFactory::NewTemp();
   // std::string* name_str = new std::string(this->name_->Name());
 
   // TODO(wjl) : attention ! that is buggy code !!!
-  int add_ = 0x400000 + num * 8;
+  // int add_ = 0x400000 + num * 8;
 
   // reg_manager->temp_map_->Enter(name_tmp,name_str);
-  instr_list.Append(new assem::MoveInstr("movq  $" + std::to_string(
-    add_
-  )  + ",`d0\n", new temp::TempList(name_tmp),
-  nullptr));
+  // instr_list.Append(new assem::MoveInstr("movq  $" + std::to_string(
+  //   add_
+  // )  + ",`d0\n", new temp::TempList(name_tmp),
+  // nullptr));
+  instr_list.Append(new assem::OperInstr("leaq  " + label_ + "(%rip),`d0",new temp::TempList(name_tmp),nullptr,nullptr));
   return name_tmp;
 }
 
@@ -672,19 +750,20 @@ temp::Temp *CallExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   // temp::Temp* fun = this->fun_->Munch(instr_list,fs);
   // TODO(wjl) : tiger don't exist function embedded
   printf("into call\n");
-  temp::Temp* fun = temp::TempFactory::NewTemp();
+  // TODO(wjl) : fix a code frame used in lab5
+  // temp::Temp* fun = temp::TempFactory::NewTemp();
   std::string *fun_name = new std::string(static_cast<tree::NameExp*>(this->fun_)->name_->Name());
-  reg_manager->temp_map_->Enter(fun,fun_name);
+  // reg_manager->temp_map_->Enter(fun,fun_name);
   // put the out in core registers
   temp::TempList* args = this->args_->MunchArgs(instr_list,fs);
   temp::TempList *call_decs = reg_manager->CallerSaves();
   call_decs->Append(reg_manager->ReturnValue());
 
-  temp::TempList* src_ = new temp::TempList(fun);
+  temp::TempList* src_ = new temp::TempList();
   for(auto item : args->GetList()){
     src_->Append(item);
   }
-  instr_list.Append(new assem::OperInstr("callq  `s0\n", call_decs, src_ ,nullptr));
+  instr_list.Append(new assem::OperInstr("callq  " + (*fun_name) + "\n", call_decs, src_ ,nullptr));
   return reg_manager->ReturnValue();
 }
 
@@ -707,8 +786,9 @@ temp::TempList *ExpList::MunchArgs(assem::InstrList &instr_list, std::string_vie
     } else {
       // store to the stack
       // TODO(wjl) : may be buggy
-      instr_list.Append(new assem::OperInstr("movq  `s0, "+ std::to_string((counter - 6) * 8) + "(%rsp)",nullptr,
-      new temp::TempList(item),nullptr));
+      // TODO(wjl) : replace machine register to temp
+      instr_list.Append(new assem::OperInstr("movq  `s0, "+ std::to_string((counter - 6) * 8) + "(`s1)",nullptr,
+      new temp::TempList({item,reg_manager->StackPointer()}),nullptr));
     }
     counter++;
   }

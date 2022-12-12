@@ -10,7 +10,7 @@
 #include "tiger/frame/frame.h"
 #include "tiger/semant/types.h"
 
-#include "tiger/frame/x64frame.cc"
+#include "tiger/frame/x64frame.h"
 
 namespace tr {
 

@@ -135,14 +135,21 @@ namespace frame{
     tree::Stm* procEntryExit1(frame::Frame *frame, tree::Stm* stm){
         // concat the view shift code with the given code
         auto iter = frame->view_shift->end();
+        // tree::Stm* new_stm = frame->view_shift->back();
         tree::Stm* new_stm = stm;
         --iter;
+        // --iter;
         // do concat job
         int callee_num = reg_manager->CalleeSaves()->GetList().size();
         int counter = 0;
         if(frame->view_shift->size() == 0){
             return stm;
         } else  {
+            // for(int i = 1;i < callee_num;++i){
+            //     new_stm = new tree::SeqStm(*iter,new_stm);
+            //     iter--;
+            // }
+            // new_stm = new tree::SeqStm(stm,new_stm);
             while(true){
                 new_stm = new tree::SeqStm(*iter,new_stm);
                 if(iter == frame->view_shift->begin()){
