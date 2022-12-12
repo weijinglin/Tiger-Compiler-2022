@@ -157,6 +157,9 @@ void LiveGraphFactory::LiveMap() {
 
   // init the table
   for(auto instr : instr_list->GetList()){
+    // // TODO(wjl) : print
+    // temp::Map *color = temp::Map::LayerMap(reg_manager->temp_map_, temp::Map::Name());
+    // instr->NodeInfo()->Print(stderr,color);
     this->in_->Enter(instr,new temp::TempList());
     this->out_->Enter(instr,new temp::TempList());
   }
@@ -181,6 +184,24 @@ void LiveGraphFactory::LiveMap() {
       // and produce new in and out and compare
       auto succ_ = (*iter)->Succ()->GetList();
       auto node_in = Union((*iter)->NodeInfo()->Use(),Minus(prev_out,(*iter)->NodeInfo()->Def()));
+
+      // TODO(wjl) : some debug code
+      // temp::Map *color = temp::Map::LayerMap(reg_manager->temp_map_, temp::Map::Name());
+      // (*iter)->NodeInfo()->Print(stderr,color);
+      // if((*iter)->NodeInfo()->Use()){
+      //   for(auto a_ : (*iter)->NodeInfo()->Use()->GetList()){
+      //     printf("t%d  ",a_->Int());
+      //   }
+      //   printf("\n");
+      // }
+      // if((*iter)->NodeInfo()->Def()){
+      //   for(auto a_ : (*iter)->NodeInfo()->Def()->GetList()){
+      //     printf("t%d  ",a_->Int());
+      //   }
+      //   printf("\n");
+      // }
+
+
       temp::TempList* node_out = new temp::TempList();
       if(succ_.size() > 0)
         node_out = this->in_->Look(succ_.front());
@@ -220,10 +241,19 @@ void LiveGraphFactory::InterfGraph() {
 
     auto def_list = instr->NodeInfo()->Def();
     if(dynamic_cast<assem::OperInstr*>(instr->NodeInfo()) != nullptr){
+
+      // // TODO(wjl) : print
+      // temp::Map *color = temp::Map::LayerMap(reg_manager->temp_map_, temp::Map::Name());
+      // instr->NodeInfo()->Print(stderr,color);
+
       if(def_list){
+        // printf("def : ");
         for(auto def : def_list->GetList()){
           // this->live_graph_.interf_graph->NewNode();
           auto def_tab = this->temp_node_map_->Look(def);
+
+          // printf("t%d  out is :  ",def->Int());
+
           if(def_tab == nullptr){
             def_tab = this->live_graph_.interf_graph->NewNode(def);
             this->temp_node_map_->Enter(def,def_tab);
@@ -232,6 +262,7 @@ void LiveGraphFactory::InterfGraph() {
           // normal operation
           for(auto node : node_out->GetList()){
             auto node_tab = this->temp_node_map_->Look(node);
+            // printf("t%d  ",node->Int());
             if(node_tab == nullptr){
               node_tab = this->live_graph_.interf_graph->NewNode(node);
               this->temp_node_map_->Enter(node,node_tab);
@@ -240,6 +271,8 @@ void LiveGraphFactory::InterfGraph() {
             this->live_graph_.interf_graph->AddEdge(def_tab,node_tab);
             this->live_graph_.interf_graph->AddEdge(node_tab,def_tab);
           }
+
+          // printf("\n");
         }
       }
     } else if(dynamic_cast<assem::MoveInstr*>(instr->NodeInfo()) != nullptr){

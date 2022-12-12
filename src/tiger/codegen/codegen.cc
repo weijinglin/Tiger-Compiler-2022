@@ -320,7 +320,7 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       mem_list,nullptr));
 
       instr_list.Append(new assem::OperInstr("addq  `s0,`d0\n",new temp::TempList(res),
-      new temp::TempList(this->left_->Munch(instr_list,fs)),nullptr));
+      new temp::TempList({this->left_->Munch(instr_list,fs),res}),nullptr));
       return res;
     } else if(dynamic_cast<tree::MemExp*>(this->left_) != nullptr){
       temp::Temp* res = temp::TempFactory::NewTemp();
@@ -329,7 +329,7 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       bin_op,nullptr));
 
       instr_list.Append(new assem::OperInstr("addq  `s0,`d0\n",new temp::TempList(res),
-      new temp::TempList(this->left_->Munch(instr_list,fs)),nullptr));
+      new temp::TempList({this->left_->Munch(instr_list,fs),res}),nullptr));
 
       return res;
     } else if(dynamic_cast<tree::ConstExp*>(this->left_) != nullptr){
@@ -341,7 +341,7 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
 
       instr_list.Append(new assem::OperInstr("addq  $" + std::to_string(static_cast<tree::ConstExp*>(this->left_)->consti_) 
       + ",`d0\n",new temp::TempList(res),
-      nullptr,nullptr));
+      new temp::TempList(res),nullptr));
 
       return res;
     } else {
@@ -439,8 +439,9 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       instr_list.Append(new assem::OperInstr("movq  `s0,`d0\n",new temp::TempList(res),
       left_op,nullptr));
 
+      // TODO(wjl) : fix the num of param(fixed)
       instr_list.Append(new assem::OperInstr("subq  `s0,`d0\n",new temp::TempList(res),
-      new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
+      new temp::TempList({this->right_->Munch(instr_list,fs),res}),nullptr));
       return res;
     } else if(dynamic_cast<tree::MemExp*>(this->left_) != nullptr){
       temp::Temp* res = temp::TempFactory::NewTemp();
@@ -449,7 +450,7 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       bin_op,nullptr));
 
       instr_list.Append(new assem::OperInstr("subq  `s0,`d0\n",new temp::TempList(res),
-      new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
+      new temp::TempList({this->right_->Munch(instr_list,fs),res}),nullptr));
 
       return res;
     } else if(dynamic_cast<tree::ConstExp*>(this->left_) != nullptr){
@@ -460,7 +461,7 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       left_op,nullptr));
 
       instr_list.Append(new assem::OperInstr("subq  `s0,`d0\n",new temp::TempList(res),
-      new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
+      new temp::TempList({this->right_->Munch(instr_list,fs),res}),nullptr));
       
       return res;
     } else {
@@ -537,9 +538,11 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
 
       return res;
     } else if(dynamic_cast<tree::ConstExp*>(this->right_) != nullptr){
-      instr_list.Append(new assem::OperInstr("imulq $" + std::to_string(
+      temp::Temp* mid_ = temp::TempFactory::NewTemp();
+      instr_list.Append(new assem::OperInstr("movq  $" + std::to_string(
         static_cast<tree::ConstExp*>(this->right_)->consti_
-      ) + "\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
+      ) + ",`d0",new temp::TempList(mid_),nullptr,nullptr));
+      instr_list.Append(new assem::OperInstr("imulq `s0\n" , nullptr, new temp::TempList({mid_,this->right_->Munch(instr_list,fs)}),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
       // TODO(wjl) : replace machine register to temp
@@ -618,9 +621,11 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
 
       return res;
     } else if(dynamic_cast<tree::ConstExp*>(this->right_) != nullptr){
-      instr_list.Append(new assem::OperInstr("idivq $" + std::to_string(
+      temp::Temp* mid_ = temp::TempFactory::NewTemp();
+      instr_list.Append(new assem::OperInstr("movq  $" + std::to_string(
         static_cast<tree::ConstExp*>(this->right_)->consti_
-      ) + "\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
+      ) + ",`d0",new temp::TempList(mid_),nullptr,nullptr));
+      instr_list.Append(new assem::OperInstr("idivq `s0\n" , nullptr, new temp::TempList({mid_,this->right_->Munch(instr_list,fs)}),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
       // TODO(wjl) : replace machine register to temp
@@ -666,8 +671,8 @@ temp::Temp *MemExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       } else {
         // normal case
         temp::Temp* res = temp::TempFactory::NewTemp();
-        instr_list.Append(new assem::MoveInstr("movq  (`s0),`d0\n", new temp::TempList(res),
-        new temp::TempList(this->exp_->Munch(instr_list, fs))));
+        instr_list.Append(new assem::OperInstr("movq  (`s0),`d0\n", new temp::TempList(res),
+        new temp::TempList(this->exp_->Munch(instr_list, fs)),nullptr));
         return res;
       }
     } else {

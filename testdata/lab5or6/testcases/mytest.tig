@@ -1,7 +1,14 @@
 let
-	var a := 10
+    var N := 8
+
+    type t = {a:int, b:int}
+    type strArray = array of string
+    type recArray = array of t
+
+    var row := strArray [ N ] of "a"
+    var x := recArray [ N ] of t{a=1,b=2}
 
 in
-	while a >= 0
-	do (printi(a);a := a - 1;printi(a);break)
+    print(row[0]);
+    printi(x[0].b)
 end

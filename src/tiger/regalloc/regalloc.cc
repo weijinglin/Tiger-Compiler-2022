@@ -38,6 +38,9 @@ void RegAllocator::RegAlloc(){
         result->il_ = this->assem_instr.get()->GetInstrList();
         // init color
         for(auto node : this->live_graph_factory->GetLiveGraph().interf_graph->Nodes()->GetList()){
+            if(node->NodeInfo()->Int() == 107)
+                continue;
+            printf("color node t%d to %s\n",node->NodeInfo()->Int(),reg_manager->getCoreString(color.at(node))->c_str());
             result->coloring_->Enter(node->NodeInfo(),reg_manager->getCoreString(color.at(node)));
         }
         return;
@@ -50,6 +53,11 @@ void RegAllocator::DeleteMove()
     cg::AssemInstr* instr_re = new cg::AssemInstr(new assem::InstrList());
     for(auto instr : this->assem_instr.get()->GetInstrList()->GetList()){
         if(dynamic_cast<assem::MoveInstr*>(instr) != nullptr){
+            // TODO(wjl) : print
+            temp::Map *color_ = temp::Map::LayerMap(reg_manager->temp_map_, temp::Map::Name());
+            // instr->Print(stderr,color);
+            printf("move instr hit\n");
+            instr->Print(stderr,color_);
             if(instr->Def()){
                 if(color[GetAlias(this->live_graph_factory->GetTempNodeMap()->Look(instr->Def()->GetList().front()))]
                  == color[GetAlias(this->live_graph_factory->GetTempNodeMap()->Look(instr->Use()->GetList().front()))]){
@@ -94,9 +102,12 @@ void RegAllocator::LivenessAnalysis()
         // escape rsp
         if(this->precolored->Contain(node) || node->NodeInfo()->Int() == 107){
         // if(this->precolored->Contain(node)){
+            // printf("t%d\n",node->NodeInfo()->Int());
             continue;
         } else {
-            printf("put t%d into initial\n", node->NodeInfo()->Int());
+            // if(node->NodeInfo()->Int() == 107){
+            //     printf("hit\n");
+            // }
             this->initial->Append(node);
         }
     }
@@ -107,6 +118,7 @@ void RegAllocator::LivenessAnalysis()
         this->color.insert(std::pair<live::INodePtr,int>{node,counter});
         counter++;
     }
+    // this->color.insert(std::pair<live::INodePtr,int>{this->live_graph_factory->GetTempNodeMap()->Look(reg_manager->StackPointer()),counter});
 }
 
 void RegAllocator::Build()
@@ -143,7 +155,6 @@ void RegAllocator::Build()
     for(auto node : this->live_graph_factory->GetLiveGraph().interf_graph->Nodes()->GetList()){
         // TODO(wjl) : use inDegree may be buggy
         this->degree[node] = node->InDegree();
-        printf("test for t%d is %d\n",node->NodeInfo()->Int(),this->degree.at(node));
         if(precolored->Contain(node)){
             this->degree[node] = INT32_MAX;
         }
@@ -418,6 +429,7 @@ void RegAllocator::AssignColors()
     while (this->selectStack->GetList().size() != 0)
     {
         /* code */
+        // TODO(wjl) : maybe buggy
         auto n = this->selectStack->GetList().front();
         this->selectStack->DeleteNode(n);
         // mode the pop operation
@@ -468,20 +480,37 @@ void RegAllocator::RewriteProgram()
     }
     temp::Map *color = temp::Map::LayerMap(reg_manager->temp_map_, temp::Map::Name());
     
+    temp::TempList* new_temps = new temp::TempList();
+
     for(auto instr : this->assem_instr->GetInstrList()->GetList()){
         // load assem need to be place in the front(load)
-        instr->Print(stderr,color);
+
+        // TODO(wjl) : debug code
+        // instr->Print(stderr,color);
+
+        if(dynamic_cast<assem::LabelInstr*>(instr) != nullptr){
+            instr_re->GetInstrList()->Append(instr);
+            continue;
+        } else if(dynamic_cast<assem::OperInstr*>(instr) != nullptr &&
+        static_cast<assem::OperInstr*>(instr)->assem_.compare("") == 0){
+            instr_re->GetInstrList()->Append(instr);
+            continue;
+        }
         if(instr->Use()){
             for(auto usage : instr->Use()->GetList()){
                 if(this->spilledNodes->Contain(this->live_graph_factory->GetTempNodeMap()->Look(usage))){
                     frame::Access* new_access = temp_map.at(usage);
 
                     temp::TempList* src = new temp::TempList();
-                    src->Append(usage);
+                    temp::Temp* new_temp = temp::TempFactory::NewTemp();
+                    new_temps->Append(new_temp);
+                    src->Append(new_temp);
 
                     assem::OperInstr* new_instr = new assem::OperInstr("movq  (" + frame_->name_->Name() + "_framesize-" +
-                    std::to_string(static_cast<frame::InFrameAccess *>(new_access)->offset) + ")(%rsp),`s0",nullptr,src,nullptr);
+                    std::to_string(static_cast<frame::InFrameAccess *>(new_access)->offset) + ")(%rsp),`d0",src,nullptr,nullptr);
                     instr_re->GetInstrList()->Append(new_instr);
+                    assem::MoveInstr* move_new = new assem::MoveInstr("movq  `s0,`d0\n",new temp::TempList(usage),new temp::TempList(new_temp));
+                    instr_re->GetInstrList()->Append(move_new);
                 }
             }
         }
@@ -497,9 +526,13 @@ void RegAllocator::RewriteProgram()
 
                     // construct the temp
                     temp::TempList* src = new temp::TempList();
-                    src->Append(def);
+                    temp::Temp* new_temp = temp::TempFactory::NewTemp();
+                    new_temps->Append(new_temp);
+                    src->Append(new_temp);
 
                     // TODO(wjl) : here maybe buggy
+                    assem::MoveInstr* move_new = new assem::MoveInstr("movq  `s0,`d0\n", src, new temp::TempList(def));
+                    instr_re->GetInstrList()->Append(move_new);
                     assem::OperInstr* new_instr = new assem::OperInstr("movq  `s0,(" + frame_->name_->Name() + "_framesize-" + 
                     std::to_string(static_cast<frame::InFrameAccess *>(new_access)->offset) + ")(%rsp)",nullptr,src,nullptr);
                     instr_re->GetInstrList()->Append(new_instr);
@@ -507,6 +540,8 @@ void RegAllocator::RewriteProgram()
             }
         }
     }
+
+    printf("rewrite program finished\n\n");
 
     // some init job
     this->spilledNodes->Clear();
