@@ -19,7 +19,6 @@ void FlowGraphFactory::AssemFlowGraph() {
   /* TODO: Put your lab6 code here */
   // AssemFlowGraph() will construct the flow graph and store into flowgraph_
   std::list<assem::Instr *> instr_list = this->instr_list_->GetList();
-  printf("assem flow size is %d\n",instr_list.size());
   std::list<FNodePtr> jump_list;
 
   FNodePtr last_node = nullptr;
@@ -28,10 +27,6 @@ void FlowGraphFactory::AssemFlowGraph() {
   for(auto instr : instr_list){
     temp::Map *color = temp::Map::LayerMap(reg_manager->temp_map_, temp::Map::Name());
     counter++;
-    if(counter == instr_list.size() + 1){
-      break;
-    }
-    instr->Print(stderr,color);
     curr_node = this->flowgraph_->NewNode(instr);
     if(!last_node){
       // first instr case and the jump case(jumped dst)
@@ -49,7 +44,6 @@ void FlowGraphFactory::AssemFlowGraph() {
         }
       } else if(dynamic_cast<assem::LabelInstr*>(curr_node->NodeInfo()) != nullptr){
         // label case
-        printf("find label case is %s\n",static_cast<assem::LabelInstr*>(instr)->label_->Name().c_str());
         this->label_map_.get()->Enter(static_cast<assem::LabelInstr*>(instr)->label_,curr_node);
         last_node = curr_node;
       } else {
@@ -71,7 +65,6 @@ void FlowGraphFactory::AssemFlowGraph() {
       }
     } else if(dynamic_cast<assem::LabelInstr*>(curr_node->NodeInfo()) != nullptr){
       // label case
-      printf("find label case is %s\n",static_cast<assem::LabelInstr*>(instr)->label_->Name().c_str());
       this->label_map_.get()->Enter(static_cast<assem::LabelInstr*>(instr)->label_,curr_node);
       this->flowgraph_->AddEdge(last_node,curr_node);
       last_node = curr_node;
@@ -85,7 +78,6 @@ void FlowGraphFactory::AssemFlowGraph() {
   for(auto jump_ : jump_list){
     auto jump_instr = jump_->NodeInfo();
     for(auto label_ : *(static_cast<assem::OperInstr*>(jump_instr)->jumps_->labels_)){
-      printf("prog is %s and label is %s\n",static_cast<assem::OperInstr*>(jump_instr)->assem_.c_str(),label_->Name().c_str());
       fg::FNodePtr jump_node = this->label_map_.get()->Look(label_);
       this->flowgraph_->AddEdge(jump_,jump_node);
     }
@@ -126,7 +118,7 @@ namespace assem {
 
 temp::TempList *LabelInstr::Def() const {
   /* TODO: Put your lab6 code here */
-  return nullptr;
+  return new temp::TempList();
 }
 
 temp::TempList *MoveInstr::Def() const {
@@ -141,7 +133,7 @@ temp::TempList *OperInstr::Def() const {
 
 temp::TempList *LabelInstr::Use() const {
   /* TODO: Put your lab6 code here */
-  return nullptr;
+  return new temp::TempList();
 }
 
 temp::TempList *MoveInstr::Use() const {

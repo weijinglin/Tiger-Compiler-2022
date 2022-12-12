@@ -699,9 +699,10 @@ temp::Temp *TempExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
     // it is not problem because rbp here is not used except for frame pointer
     temp::Temp* my_rbp = temp::TempFactory::NewTemp();
     // TODO(wjl) : replace machine register to temp
-    temp::TempList* src = new temp::TempList();
-    src->Append(reg_manager->StackPointer());
-    instr_list.Append(new assem::OperInstr("leaq  " + std::string(fs) + "(`s0),`d0",new temp::TempList(my_rbp),src,nullptr));
+    // temp::TempList* src = new temp::TempList();
+    // src->Append(reg_manager->StackPointer());
+    // instr_list.Append(new assem::OperInstr("leaq  " + std::string(fs) + "(`s0),`d0",new temp::TempList(my_rbp),src,nullptr));
+    instr_list.Append(new assem::OperInstr("leaq  " + std::string(fs) + "(%rsp),`d0",new temp::TempList(my_rbp),nullptr,nullptr));
     return my_rbp;
   }
   return this->temp_;
@@ -787,8 +788,10 @@ temp::TempList *ExpList::MunchArgs(assem::InstrList &instr_list, std::string_vie
       // store to the stack
       // TODO(wjl) : may be buggy
       // TODO(wjl) : replace machine register to temp
-      instr_list.Append(new assem::OperInstr("movq  `s0, "+ std::to_string((counter - 6) * 8) + "(`s1)",nullptr,
-      new temp::TempList({item,reg_manager->StackPointer()}),nullptr));
+      // instr_list.Append(new assem::OperInstr("movq  `s0, "+ std::to_string((counter - 6) * 8) + "(`s1)",nullptr,
+      // new temp::TempList({item,reg_manager->StackPointer()}),nullptr));
+      instr_list.Append(new assem::OperInstr("movq  `s0, "+ std::to_string((counter - 6) * 8) + "(%rsp)",nullptr,
+      new temp::TempList(item),nullptr));
     }
     counter++;
   }

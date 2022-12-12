@@ -86,14 +86,16 @@ temp::TempList* Minus(temp::TempList* a, temp::TempList* b){
     printf("seg mentation in Minus\n");
     return nullptr;
   } else if(!a){
-    return b;  
+    return new temp::TempList();  
   } else if(!b){
     return a; 
   } else {
     temp::TempList* res = new temp::TempList();
 
-    for(auto ele : b->GetList()){
-      if(Contain(a,ele)){
+    for(auto ele : a->GetList()){
+      if(Contain(b,ele)){
+        
+      } else {
         res->Append(ele);
       }
     }
@@ -121,6 +123,28 @@ bool Equal(temp::TempList* a, temp::TempList* b){
   return res;
 }
 
+void LiveGraphFactory::DebugPrint()
+{
+ if(false){
+  printf("\n-----liveness-----\n");
+  auto instr_list = this->flowgraph_->Nodes();
+  temp::Map *color = temp::Map::LayerMap(reg_manager->temp_map_, temp::Map::Name());
+  for(auto node : instr_list->GetList()){
+    node->NodeInfo()->Print(stderr,color);
+    printf("in : ");
+    for(auto in_pri : this->in_->Look(node)->GetList()){
+      printf("t%d  ",in_pri->Int());
+    }
+    printf("\n");
+    printf("out : ");
+    for(auto out_pri : this->out_->Look(node)->GetList()){
+      printf("t%d  ",out_pri->Int());
+    }
+    printf("\n");
+  }
+ }
+
+}
 
 void LiveGraphFactory::LiveMap() {
   /* TODO: Put your lab6 code here */
@@ -130,7 +154,18 @@ void LiveGraphFactory::LiveMap() {
   auto instr_list = this->flowgraph_->Nodes();
   auto iter = instr_list->GetList().end();
   iter--;
+
+  // init the table
+  for(auto instr : instr_list->GetList()){
+    this->in_->Enter(instr,new temp::TempList());
+    this->out_->Enter(instr,new temp::TempList());
+  }
+
   while(true){
+    
+    DebugPrint();
+
+
     for(int i = 0;i < instr_list->GetList().size();++i){
       auto prev_in = this->in_->Look(*iter);
       auto prev_out = this->out_->Look(*iter);
@@ -158,8 +193,8 @@ void LiveGraphFactory::LiveMap() {
       }
 
       // TODO(wjl) : use set maybe buggy 
-      this->in_->Set(*iter,node_in);
-      this->out_->Set(*iter,node_out);
+      this->in_->Enter(*iter,node_in);
+      this->out_->Enter(*iter,node_out);
 
       iter--;
     }
@@ -179,7 +214,6 @@ void LiveGraphFactory::InterfGraph() {
   // construct the interface_graph and take care of move instr
   // after LiveMap , the in_ and out_ have been filled with the variable.
   auto instr_list = this->flowgraph_->Nodes();
-  printf("the size of interfacegraph is %d\n",instr_list->GetList().size());
 
   for(auto instr : instr_list->GetList()){
     auto node_out = this->out_->Look(instr);

@@ -67,6 +67,7 @@ private:
 
   void LiveMap();
   void InterfGraph();
+  void DebugPrint();
 };
 
 } // namespace live

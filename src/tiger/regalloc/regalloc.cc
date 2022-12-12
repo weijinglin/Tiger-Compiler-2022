@@ -91,9 +91,12 @@ void RegAllocator::LivenessAnalysis()
     // init the initial set
     live::INodeListPtr all_nodes = this->live_graph_factory->GetLiveGraph().interf_graph->Nodes();
     for(auto node : all_nodes->GetList()){
-        if(this->precolored->Contain(node)){
+        // escape rsp
+        if(this->precolored->Contain(node) || node->NodeInfo()->Int() == 107){
+        // if(this->precolored->Contain(node)){
             continue;
         } else {
+            printf("put t%d into initial\n", node->NodeInfo()->Int());
             this->initial->Append(node);
         }
     }
@@ -140,6 +143,10 @@ void RegAllocator::Build()
     for(auto node : this->live_graph_factory->GetLiveGraph().interf_graph->Nodes()->GetList()){
         // TODO(wjl) : use inDegree may be buggy
         this->degree[node] = node->InDegree();
+        printf("test for t%d is %d\n",node->NodeInfo()->Int(),this->degree.at(node));
+        if(precolored->Contain(node)){
+            this->degree[node] = INT32_MAX;
+        }
     }
 }
 
@@ -179,7 +186,7 @@ void RegAllocator::Coalesce()
 void RegAllocator::Combine(live::INodePtr u,live::INodePtr v)
 {
     // except %rsp and %rip
-    const int K = this->precolored->GetList().size() - 2;
+    const int K = this->precolored->GetList().size();
     if(this->freezeWorklist->Contain(v)){
         this->freezeWorklist->DeleteNode(v);
     } else {
@@ -239,7 +246,7 @@ bool RegAllocator::Conservative(live::INodeListPtr nodes)
 {
     int k = 0;
     // except %rsp and %rip
-    const int K = this->precolored->GetList().size() - 2;
+    const int K = this->precolored->GetList().size();
     for(auto node : nodes->GetList()){
         if(this->degree.at(node) >= K){
             k++;
@@ -251,14 +258,14 @@ bool RegAllocator::Conservative(live::INodeListPtr nodes)
 bool RegAllocator::OK(live::INodePtr t, live::INodePtr u)
 {
     // except %rsp and %rip
-    const int K = this->precolored->GetList().size() - 2;
+    const int K = this->precolored->GetList().size();
     return degree.at(t) < K || this->precolored->Contain(t) || t->Succ()->Contain(u);
 }
 
 void RegAllocator::AddWorkList(live::INodePtr node)
 {
     // except %rsp and %rip
-    const int K = this->precolored->GetList().size() - 2;
+    const int K = this->precolored->GetList().size();
     if(!this->precolored->Contain(node) && !MoveRelated(node) && degree.at(node) < K){
         this->freezeWorklist->DeleteNode(node);
         this->simplifyWorklist->Append(node);
@@ -268,7 +275,7 @@ void RegAllocator::AddWorkList(live::INodePtr node)
 void RegAllocator::MakeWorkList()
 {
     // except %rsp and %rip
-    const int K = this->precolored->GetList().size() - 2;
+    const int K = this->precolored->GetList().size();
     std::list<live::INodePtr> delete_set;
     for(auto node : this->initial->GetList()){
         // this->initial->DeleteNode(node);
@@ -307,7 +314,7 @@ void RegAllocator::Simplify()
 void RegAllocator::DecrementDegree(live::INodePtr node)
 {
     // except %rsp and %rip
-    const int K = this->precolored->GetList().size() - 2;
+    const int K = this->precolored->GetList().size();
     auto d = this->degree.at(node);
     degree[node] = d - 1;
     if(d == K){
@@ -352,7 +359,8 @@ MoveListPtr RegAllocator::NodeMoves(live::INodePtr node){
        // can find core key
        return this->moveList.at(node)->Intersect(this->activeMoves->Union(this->worklistMoves));
     } else {
-        this->moveList.insert(std::pair<live::INodePtr,MoveListPtr>{node,new live::MoveList()});
+       this->moveList.insert(std::pair<live::INodePtr,MoveListPtr>{node,new live::MoveList()});
+       return this->moveList.at(node);
     }
 }
 
@@ -368,7 +376,7 @@ void RegAllocator::FreezeMoves(live::INodePtr u)
 {
     live::INodePtr v;
     // except %rsp and %rip
-    const int K = this->precolored->GetList().size() - 2;
+    const int K = this->precolored->GetList().size();
     for(auto m : NodeMoves(u)->GetList()){
         if(GetAlias(m.second) == GetAlias(u)){
             v = GetAlias(m.first);
@@ -406,7 +414,7 @@ void RegAllocator::SelectSpill()
 void RegAllocator::AssignColors()
 {
     // except %rsp and %rip
-    const int K = this->precolored->GetList().size() - 2;
+    const int K = this->precolored->GetList().size();
     while (this->selectStack->GetList().size() != 0)
     {
         /* code */
@@ -449,6 +457,7 @@ void RegAllocator::AssignColors()
 
 void RegAllocator::RewriteProgram()
 {
+    printf("rewrite program\n");
     // TODO(wjl) : maybe buggy : I do not use the new temp
     cg::AssemInstr* instr_re = new cg::AssemInstr(new assem::InstrList());
     // allocate for the variable first
@@ -457,40 +466,44 @@ void RegAllocator::RewriteProgram()
         frame::Access* new_access = frame_->allocLocal(true);
         temp_map.insert(std::pair<temp::Temp*,frame::Access*>{v->NodeInfo(),new_access});
     }
+    temp::Map *color = temp::Map::LayerMap(reg_manager->temp_map_, temp::Map::Name());
     
     for(auto instr : this->assem_instr->GetInstrList()->GetList()){
         // load assem need to be place in the front(load)
-        for(auto usage : instr->Use()->GetList()){
-            if(this->spilledNodes->Contain(this->live_graph_factory->GetTempNodeMap()->Look(usage))){
-                frame::Access* new_access = temp_map.at(usage);
+        instr->Print(stderr,color);
+        if(instr->Use()){
+            for(auto usage : instr->Use()->GetList()){
+                if(this->spilledNodes->Contain(this->live_graph_factory->GetTempNodeMap()->Look(usage))){
+                    frame::Access* new_access = temp_map.at(usage);
 
-                temp::TempList* src = new temp::TempList();
-                src->Append(reg_manager->StackPointer());
-                src->Append(usage);
+                    temp::TempList* src = new temp::TempList();
+                    src->Append(usage);
 
-                assem::OperInstr* new_instr = new assem::OperInstr("movq  " + frame_->name_->Name() + "_framesize-" +
-                std::to_string(static_cast<frame::InFrameAccess *>(new_access)->offset) + "(`s0),`s1",nullptr,nullptr,nullptr);
-                instr_re->GetInstrList()->Append(new_instr);
+                    assem::OperInstr* new_instr = new assem::OperInstr("movq  (" + frame_->name_->Name() + "_framesize-" +
+                    std::to_string(static_cast<frame::InFrameAccess *>(new_access)->offset) + ")(%rsp),`s0",nullptr,src,nullptr);
+                    instr_re->GetInstrList()->Append(new_instr);
+                }
             }
         }
 
         instr_re->GetInstrList()->Append(instr);
 
         // define and store
-        for(auto def : instr->Def()->GetList()){
-            if(this->spilledNodes->Contain(this->live_graph_factory->GetTempNodeMap()->Look(def))){
-                // use and store
-                frame::Access* new_access = temp_map.at(def);
+        if(instr->Def()){
+            for(auto def : instr->Def()->GetList()){
+                if(this->spilledNodes->Contain(this->live_graph_factory->GetTempNodeMap()->Look(def))){
+                    // use and store
+                    frame::Access* new_access = temp_map.at(def);
 
-                // construct the temp
-                temp::TempList* src = new temp::TempList();
-                src->Append(def);
-                src->Append(reg_manager->StackPointer());
+                    // construct the temp
+                    temp::TempList* src = new temp::TempList();
+                    src->Append(def);
 
-                // TODO(wjl) : here maybe buggy
-                assem::OperInstr* new_instr = new assem::OperInstr("movq  `s0," + frame_->name_->Name() + "_framesize-" + 
-                std::to_string(static_cast<frame::InFrameAccess *>(new_access)->offset) + "(`s1)",nullptr,src,nullptr);
-                instr_re->GetInstrList()->Append(new_instr);
+                    // TODO(wjl) : here maybe buggy
+                    assem::OperInstr* new_instr = new assem::OperInstr("movq  `s0,(" + frame_->name_->Name() + "_framesize-" + 
+                    std::to_string(static_cast<frame::InFrameAccess *>(new_access)->offset) + ")(%rsp)",nullptr,src,nullptr);
+                    instr_re->GetInstrList()->Append(new_instr);
+                }
             }
         }
     }
@@ -520,6 +533,9 @@ void RegAllocator::RewriteProgram()
     this->color.clear();
     this->alias.clear();
     this->moveList.clear();
+
+    this->precolored->Clear();
+    this->initial->Clear();
 
 }
 
