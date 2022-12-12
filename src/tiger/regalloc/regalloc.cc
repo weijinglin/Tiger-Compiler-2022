@@ -502,15 +502,16 @@ void RegAllocator::RewriteProgram()
                     frame::Access* new_access = temp_map.at(usage);
 
                     temp::TempList* src = new temp::TempList();
-                    temp::Temp* new_temp = temp::TempFactory::NewTemp();
-                    new_temps->Append(new_temp);
-                    src->Append(new_temp);
+                    // temp::Temp* new_temp = temp::TempFactory::NewTemp();
+                    // new_temps->Append(new_temp);
+                    // src->Append(new_temp);
+                    src->Append(usage);
 
                     assem::OperInstr* new_instr = new assem::OperInstr("movq  (" + frame_->name_->Name() + "_framesize-" +
                     std::to_string(static_cast<frame::InFrameAccess *>(new_access)->offset) + ")(%rsp),`d0",src,nullptr,nullptr);
                     instr_re->GetInstrList()->Append(new_instr);
-                    assem::MoveInstr* move_new = new assem::MoveInstr("movq  `s0,`d0\n",new temp::TempList(usage),new temp::TempList(new_temp));
-                    instr_re->GetInstrList()->Append(move_new);
+                    // assem::MoveInstr* move_new = new assem::MoveInstr("movq  `s0,`d0\n",new temp::TempList(usage),new temp::TempList(new_temp));
+                    // instr_re->GetInstrList()->Append(move_new);
                 }
             }
         }
@@ -526,13 +527,14 @@ void RegAllocator::RewriteProgram()
 
                     // construct the temp
                     temp::TempList* src = new temp::TempList();
-                    temp::Temp* new_temp = temp::TempFactory::NewTemp();
-                    new_temps->Append(new_temp);
-                    src->Append(new_temp);
+                    // temp::Temp* new_temp = temp::TempFactory::NewTemp();
+                    // new_temps->Append(new_temp);
+                    // src->Append(new_temp);
+                    src->Append(def);
 
                     // TODO(wjl) : here maybe buggy
-                    assem::MoveInstr* move_new = new assem::MoveInstr("movq  `s0,`d0\n", src, new temp::TempList(def));
-                    instr_re->GetInstrList()->Append(move_new);
+                    // assem::MoveInstr* move_new = new assem::MoveInstr("movq  `s0,`d0\n", src, new temp::TempList(def));
+                    // instr_re->GetInstrList()->Append(move_new);
                     assem::OperInstr* new_instr = new assem::OperInstr("movq  `s0,(" + frame_->name_->Name() + "_framesize-" + 
                     std::to_string(static_cast<frame::InFrameAccess *>(new_access)->offset) + ")(%rsp)",nullptr,src,nullptr);
                     instr_re->GetInstrList()->Append(new_instr);
