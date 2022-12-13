@@ -11,7 +11,6 @@ void RegAllocator::RegAlloc(){
     LivenessAnalysis();
     Build();
     MakeWorkList();
-    printf("frame size is %d\n",this->frame_->frame_size);
     while(true){
         if(simplifyWorklist->GetList().size() != 0){
             Simplify();
@@ -42,7 +41,6 @@ void RegAllocator::RegAlloc(){
         for(auto node : this->live_graph_factory->GetLiveGraph().interf_graph->Nodes()->GetList()){
             if(node->NodeInfo()->Int() == 107)
                 continue;
-            // printf("color node t%d to %s\n",node->NodeInfo()->Int(),reg_manager->getCoreString(color.at(node))->c_str());
             result->coloring_->Enter(node->NodeInfo(),reg_manager->getCoreString(color.at(node)));
         }
         return;
@@ -475,20 +473,17 @@ void RegAllocator::AssignColors()
 
 void RegAllocator::RewriteProgram()
 {
-    printf("rewrite program\n");
     // TODO(wjl) : maybe buggy : I do not use the new temp
     cg::AssemInstr* instr_re = new cg::AssemInstr(new assem::InstrList());
     // allocate for the variable first
     std::map<temp::Temp*,frame::Access*> temp_map;
     for(auto v : this->spilledNodes->GetList()){
-        printf("t%d  ",v->NodeInfo()->Int());
         if(v->NodeInfo()->Int() == 107){
             continue;
         }
         frame::Access* new_access = frame_->allocLocal(true);
         temp_map.insert(std::pair<temp::Temp*,frame::Access*>{v->NodeInfo(),new_access});
     }
-    printf("\n");
     temp::Map *color = temp::Map::LayerMap(reg_manager->temp_map_, temp::Map::Name());
     
     temp::TempList* new_temps = new temp::TempList();
@@ -606,7 +601,6 @@ void RegAllocator::RewriteProgram()
         }
     }
 
-    printf("rewrite program finished\n\n");
 
     // some init job
     this->spilledNodes->Clear();
@@ -618,10 +612,6 @@ void RegAllocator::RewriteProgram()
     this->freezeWorklist->Clear();
     this->spillWorklist->Clear();
     this->selectStack->Clear();
-
-    for(auto instr : this->assem_instr->GetInstrList()->GetList()){
-        instr->Print(stderr,color);
-    }
 
 
     delete this->coalescedMoves;
