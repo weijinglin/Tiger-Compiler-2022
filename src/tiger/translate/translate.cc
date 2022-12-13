@@ -350,9 +350,10 @@ tr::ExpAndTy *CallExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
       tr::ExpAndTy* mid_res = arg->Translate(venv,tenv,level,label,errormsg);
       args->Append(mid_res->exp_->UnEx());
     }
-    if(counter > 6){
-      level->frame_->frame_size += (counter - 6) * 8;
-    }
+    // TODO(wjl) : deal it in codegen
+    // if(counter > 6){
+    //   level->frame_->frame_size += (counter - 6) * 8;
+    // }
   } else {
     if(level->frame_->name_ == this->func_ || static_cast<env::FunEntry*>(fun_entry)->level_->depth <= level->depth){
       // transfer static link
@@ -367,10 +368,12 @@ tr::ExpAndTy *CallExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
         tr::ExpAndTy* mid_res = arg->Translate(venv,tenv,level,label,errormsg);
         args->Append(mid_res->exp_->UnEx());
       }
-      if(counter > 6){
-        // count the static link
-        level->frame_->frame_size += (counter - 5) * 8;
-      }
+
+      // TODO(wjl) : deal it in codegen
+      // if(counter >= 6){
+      //   // count the static link
+      //   level->frame_->frame_size += (counter - 5) * 8;
+      // }
     } else {
       // transfer the frame pointer
       // TODO(wjl) : preallocate the pos for the outbound params
@@ -382,10 +385,12 @@ tr::ExpAndTy *CallExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
         tr::ExpAndTy* mid_res = arg->Translate(venv,tenv,level,label,errormsg);
         args->Append(mid_res->exp_->UnEx());
       }
-      if(counter > 6){
-        // count the static link
-        level->frame_->frame_size += (counter - 5) * 8;
-      }
+
+      // TODO(wjl) : deal it in codegen
+      // if(counter >= 6){
+      //   // count the static link
+      //   level->frame_->frame_size += (counter - 5) * 8;
+      // }
     }
   }
 

@@ -11,6 +11,7 @@ void RegAllocator::RegAlloc(){
     LivenessAnalysis();
     Build();
     MakeWorkList();
+    printf("frame size is %d\n",this->frame_->frame_size);
     while(true){
         if(simplifyWorklist->GetList().size() != 0){
             Simplify();
@@ -30,6 +31,7 @@ void RegAllocator::RegAlloc(){
     AssignColors();
     if(this->spilledNodes->GetList().size() != 0){
         RewriteProgram();
+        
         RegAlloc();
     } else {
         // prepare for the output
@@ -40,7 +42,7 @@ void RegAllocator::RegAlloc(){
         for(auto node : this->live_graph_factory->GetLiveGraph().interf_graph->Nodes()->GetList()){
             if(node->NodeInfo()->Int() == 107)
                 continue;
-            printf("color node t%d to %s\n",node->NodeInfo()->Int(),reg_manager->getCoreString(color.at(node))->c_str());
+            // printf("color node t%d to %s\n",node->NodeInfo()->Int(),reg_manager->getCoreString(color.at(node))->c_str());
             result->coloring_->Enter(node->NodeInfo(),reg_manager->getCoreString(color.at(node)));
         }
         return;
@@ -54,10 +56,10 @@ void RegAllocator::DeleteMove()
     for(auto instr : this->assem_instr.get()->GetInstrList()->GetList()){
         if(dynamic_cast<assem::MoveInstr*>(instr) != nullptr){
             // TODO(wjl) : print
-            temp::Map *color_ = temp::Map::LayerMap(reg_manager->temp_map_, temp::Map::Name());
+            // temp::Map *color_ = temp::Map::LayerMap(reg_manager->temp_map_, temp::Map::Name());
             // instr->Print(stderr,color);
-            printf("move instr hit\n");
-            instr->Print(stderr,color_);
+            // printf("move instr hit\n");
+            // instr->Print(stderr,color_);
             if(instr->Def()){
                 if(color[GetAlias(this->live_graph_factory->GetTempNodeMap()->Look(instr->Def()->GetList().front()))]
                  == color[GetAlias(this->live_graph_factory->GetTempNodeMap()->Look(instr->Use()->GetList().front()))]){
@@ -455,7 +457,11 @@ void RegAllocator::AssignColors()
             }
         }
         if(is_empty){
-            this->spilledNodes->Append(n);
+            if(n->NodeInfo()->Int() == 107){
+                
+            } else {
+                this->spilledNodes->Append(n);
+            }
         } else {
             this->coloredNodes->Append(n);
             color[n] = idx;
@@ -475,16 +481,21 @@ void RegAllocator::RewriteProgram()
     // allocate for the variable first
     std::map<temp::Temp*,frame::Access*> temp_map;
     for(auto v : this->spilledNodes->GetList()){
+        printf("t%d  ",v->NodeInfo()->Int());
+        if(v->NodeInfo()->Int() == 107){
+            continue;
+        }
         frame::Access* new_access = frame_->allocLocal(true);
         temp_map.insert(std::pair<temp::Temp*,frame::Access*>{v->NodeInfo(),new_access});
     }
+    printf("\n");
     temp::Map *color = temp::Map::LayerMap(reg_manager->temp_map_, temp::Map::Name());
     
     temp::TempList* new_temps = new temp::TempList();
 
     for(auto instr : this->assem_instr->GetInstrList()->GetList()){
         // load assem need to be place in the front(load)
-
+        temp::TempList **src_ = nullptr, **dst_ = nullptr;
         // TODO(wjl) : debug code
         // instr->Print(stderr,color);
 
@@ -502,14 +513,41 @@ void RegAllocator::RewriteProgram()
                     frame::Access* new_access = temp_map.at(usage);
 
                     temp::TempList* src = new temp::TempList();
-                    // temp::Temp* new_temp = temp::TempFactory::NewTemp();
-                    // new_temps->Append(new_temp);
-                    // src->Append(new_temp);
-                    src->Append(usage);
+                    temp::Temp* new_temp = temp::TempFactory::NewTemp();
+                    new_temps->Append(new_temp);
+                    src->Append(new_temp);
+
+                    // src->Append(usage);
 
                     assem::OperInstr* new_instr = new assem::OperInstr("movq  (" + frame_->name_->Name() + "_framesize-" +
                     std::to_string(static_cast<frame::InFrameAccess *>(new_access)->offset) + ")(%rsp),`d0",src,nullptr,nullptr);
                     instr_re->GetInstrList()->Append(new_instr);
+                    // we can just replace the temp old to new
+
+                    if(dynamic_cast<assem::OperInstr*>(instr) != nullptr){
+                        auto src_ = static_cast<assem::OperInstr*>(instr)->src_;
+                        temp::TempList* new_src = new temp::TempList();
+                        for(auto src_pre : src_->GetList()){
+                            if(src_pre == usage){
+                                new_src->Append(new_temp);
+                            } else {
+                                new_src->Append(src_pre);
+                            }
+                        }
+                        static_cast<assem::OperInstr*>(instr)->src_ = new_src;
+                    } else if(dynamic_cast<assem::MoveInstr*>(instr) != nullptr){
+                        auto src_ = static_cast<assem::MoveInstr*>(instr)->src_;
+                        temp::TempList* new_src = new temp::TempList();
+                        for(auto src_pre : src_->GetList()){
+                            if(src_pre == usage){
+                                new_src->Append(new_temp);
+                            } else {
+                                new_src->Append(src_pre);
+                            }
+                        }
+                        static_cast<assem::OperInstr*>(instr)->src_ = new_src;
+                    }
+
                     // assem::MoveInstr* move_new = new assem::MoveInstr("movq  `s0,`d0\n",new temp::TempList(usage),new temp::TempList(new_temp));
                     // instr_re->GetInstrList()->Append(move_new);
                 }
@@ -527,10 +565,35 @@ void RegAllocator::RewriteProgram()
 
                     // construct the temp
                     temp::TempList* src = new temp::TempList();
-                    // temp::Temp* new_temp = temp::TempFactory::NewTemp();
-                    // new_temps->Append(new_temp);
-                    // src->Append(new_temp);
-                    src->Append(def);
+                    temp::Temp* new_temp = temp::TempFactory::NewTemp();
+                    new_temps->Append(new_temp);
+                    src->Append(new_temp);
+                    // src->Append(def);
+
+                    if(dynamic_cast<assem::OperInstr*>(instr) != nullptr){
+                        auto src_ = static_cast<assem::OperInstr*>(instr)->dst_;
+                        temp::TempList* new_src = new temp::TempList();
+                        for(auto src_pre : src_->GetList()){
+                            if(src_pre == def){
+                                new_src->Append(new_temp);
+                            } else {
+                                new_src->Append(src_pre);
+                            }
+                        }
+                        static_cast<assem::OperInstr*>(instr)->dst_ = new_src;
+                    } else if(dynamic_cast<assem::MoveInstr*>(instr) != nullptr){
+                        auto src_ = static_cast<assem::MoveInstr*>(instr)->dst_;
+                        temp::TempList* new_src = new temp::TempList();
+                        for(auto src_pre : src_->GetList()){
+                            if(src_pre == def){
+                                new_src->Append(new_temp);
+                            } else {
+                                new_src->Append(src_pre);
+                            }
+                        }
+                        static_cast<assem::OperInstr*>(instr)->dst_ = new_src;
+                    }
+
 
                     // TODO(wjl) : here maybe buggy
                     // assem::MoveInstr* move_new = new assem::MoveInstr("movq  `s0,`d0\n", src, new temp::TempList(def));
@@ -555,6 +618,11 @@ void RegAllocator::RewriteProgram()
     this->freezeWorklist->Clear();
     this->spillWorklist->Clear();
     this->selectStack->Clear();
+
+    for(auto instr : this->assem_instr->GetInstrList()->GetList()){
+        instr->Print(stderr,color);
+    }
+
 
     delete this->coalescedMoves;
     delete this->constrainedMoves;

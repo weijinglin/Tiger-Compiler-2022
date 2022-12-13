@@ -67,6 +67,7 @@ public:
 
   [[nodiscard]] virtual std::string* getCoreString(int idx) = 0;
 
+  [[nodiscard]] virtual temp::Temp* Rdx() = 0;
 
   temp::Map *temp_map_;
 protected:

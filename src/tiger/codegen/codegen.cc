@@ -515,11 +515,12 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       nullptr));
     }
 
-    instr_list.Append(new assem::OperInstr("cqto",nullptr,nullptr,nullptr));
+    instr_list.Append(new assem::OperInstr("cqto",new temp::TempList({reg_manager->ReturnValue(),reg_manager->Rdx()}),nullptr,nullptr));
 
     if(dynamic_cast<tree::TempExp*>(this->right_) != nullptr){
       // TODO(wjl) : may be buggy because leaving the dst nullptr
-      instr_list.Append(new assem::OperInstr("imulq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
+      instr_list.Append(new assem::OperInstr("imulq `s0\n" , new temp::TempList({reg_manager->ReturnValue(),reg_manager->Rdx()}),
+       new temp::TempList({this->right_->Munch(instr_list,fs),reg_manager->ReturnValue()}),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
       // TODO(wjl) : replace machine register to temp
@@ -528,7 +529,8 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       instr_list.Append(new assem::MoveInstr("movq  `s0, `d0", new temp::TempList(res),src));
       return res;
     } else if(dynamic_cast<tree::MemExp*>(this->right_) != nullptr){
-      instr_list.Append(new assem::OperInstr("imulq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
+      instr_list.Append(new assem::OperInstr("imulq `s0\n" , new temp::TempList({reg_manager->ReturnValue(),reg_manager->Rdx()}),
+       new temp::TempList({this->right_->Munch(instr_list,fs),reg_manager->ReturnValue()}),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
       // TODO(wjl) : replace machine register to temp
@@ -538,11 +540,12 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
 
       return res;
     } else if(dynamic_cast<tree::ConstExp*>(this->right_) != nullptr){
-      temp::Temp* mid_ = temp::TempFactory::NewTemp();
-      instr_list.Append(new assem::OperInstr("movq  $" + std::to_string(
-        static_cast<tree::ConstExp*>(this->right_)->consti_
-      ) + ",`d0",new temp::TempList(mid_),nullptr,nullptr));
-      instr_list.Append(new assem::OperInstr("imulq `s0\n" , nullptr, new temp::TempList({mid_,this->right_->Munch(instr_list,fs)}),nullptr));
+      // temp::Temp* mid_ = temp::TempFactory::NewTemp();
+      // instr_list.Append(new assem::OperInstr("movq  $" + std::to_string(
+      //   static_cast<tree::ConstExp*>(this->right_)->consti_
+      // ) + ",`d0",new temp::TempList(mid_),nullptr,nullptr));
+      instr_list.Append(new assem::OperInstr("imulq `s0\n" , new temp::TempList({reg_manager->ReturnValue(),reg_manager->Rdx()}),
+       new temp::TempList({this->right_->Munch(instr_list,fs),reg_manager->ReturnValue()}),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
       // TODO(wjl) : replace machine register to temp
@@ -552,7 +555,8 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
 
       return res;
     } else {
-      instr_list.Append(new assem::OperInstr("imulq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
+      instr_list.Append(new assem::OperInstr("imulq `s0\n" , new temp::TempList({reg_manager->ReturnValue(),reg_manager->Rdx()}),
+       new temp::TempList({this->right_->Munch(instr_list,fs),reg_manager->ReturnValue()}),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
       // TODO(wjl) : replace machine register to temp
@@ -598,11 +602,12 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       nullptr));
     }
 
-    instr_list.Append(new assem::OperInstr("cqto",nullptr,nullptr,nullptr));
+    instr_list.Append(new assem::OperInstr("cqto",new temp::TempList({reg_manager->ReturnValue(),reg_manager->Rdx()}),nullptr,nullptr));
 
     if(dynamic_cast<tree::TempExp*>(this->right_) != nullptr){
       // TODO(wjl) : may be buggy because leaving the dst nullptr
-      instr_list.Append(new assem::OperInstr("idivq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
+      instr_list.Append(new assem::OperInstr("idivq `s0\n" , new temp::TempList({reg_manager->ReturnValue(),reg_manager->Rdx()}),
+       new temp::TempList({this->right_->Munch(instr_list,fs),reg_manager->ReturnValue(),reg_manager->Rdx()}),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
       // TODO(wjl) : replace machine register to temp
@@ -611,7 +616,8 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
       instr_list.Append(new assem::MoveInstr("movq  `s0,`d0", new temp::TempList(res),src));
       return res;
     } else if(dynamic_cast<tree::MemExp*>(this->right_) != nullptr){
-      instr_list.Append(new assem::OperInstr("idivq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
+      instr_list.Append(new assem::OperInstr("idivq `s0\n" , new temp::TempList({reg_manager->ReturnValue(),reg_manager->Rdx()}),
+       new temp::TempList({this->right_->Munch(instr_list,fs),reg_manager->ReturnValue(),reg_manager->Rdx()}),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
       // TODO(wjl) : replace machine register to temp
@@ -621,11 +627,12 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
 
       return res;
     } else if(dynamic_cast<tree::ConstExp*>(this->right_) != nullptr){
-      temp::Temp* mid_ = temp::TempFactory::NewTemp();
-      instr_list.Append(new assem::OperInstr("movq  $" + std::to_string(
-        static_cast<tree::ConstExp*>(this->right_)->consti_
-      ) + ",`d0",new temp::TempList(mid_),nullptr,nullptr));
-      instr_list.Append(new assem::OperInstr("idivq `s0\n" , nullptr, new temp::TempList({mid_,this->right_->Munch(instr_list,fs)}),nullptr));
+      // temp::Temp* mid_ = temp::TempFactory::NewTemp();
+      // instr_list.Append(new assem::OperInstr("movq  $" + std::to_string(
+      //   static_cast<tree::ConstExp*>(this->right_)->consti_
+      // ) + ",`d0",new temp::TempList(mid_),nullptr,nullptr));
+      instr_list.Append(new assem::OperInstr("idivq `s0\n" , new temp::TempList({reg_manager->ReturnValue(),reg_manager->Rdx()}),
+       new temp::TempList({this->right_->Munch(instr_list,fs),reg_manager->ReturnValue(),reg_manager->Rdx()}),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
       // TODO(wjl) : replace machine register to temp
@@ -635,7 +642,8 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
 
       return res;
     } else {
-      instr_list.Append(new assem::OperInstr("idivq `s0\n" , nullptr, new temp::TempList(this->right_->Munch(instr_list,fs)),nullptr));
+      instr_list.Append(new assem::OperInstr("idivq `s0\n" , new temp::TempList({reg_manager->ReturnValue(),reg_manager->Rdx()}),
+       new temp::TempList({this->right_->Munch(instr_list,fs),reg_manager->ReturnValue(),reg_manager->Rdx()}),nullptr));
 
       temp::Temp* res = temp::TempFactory::NewTemp();
       // TODO(wjl) : replace machine register to temp
@@ -746,7 +754,7 @@ temp::Temp *ConstExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
   // TODO(wjl) : here just move the const value to a register , so may be wrong (this thinking can't match x86-64 structure)
   temp::Temp* res = temp::TempFactory::NewTemp();
-  instr_list.Append(new assem::OperInstr("movq $" + std::to_string(this->consti_) + ",`d0\n",
+  instr_list.Append(new assem::OperInstr("movq  $" + std::to_string(this->consti_) + ",`d0\n",
   new temp::TempList(res),nullptr,nullptr));
   return res;
 }
@@ -756,6 +764,14 @@ temp::Temp *CallExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   // temp::Temp* fun = this->fun_->Munch(instr_list,fs);
   // TODO(wjl) : tiger don't exist function embedded
   printf("into call\n");
+
+  // adj the frame first
+  int counter = this->args_->GetList().size();
+  if(counter > 6){
+    instr_list.Append(new assem::OperInstr("subq  $" + std::to_string((counter - 6) * 8) + ",%rsp",nullptr,nullptr,nullptr));
+  } 
+
+
   // TODO(wjl) : fix a code frame used in lab5
   // temp::Temp* fun = temp::TempFactory::NewTemp();
   std::string *fun_name = new std::string(static_cast<tree::NameExp*>(this->fun_)->name_->Name());
@@ -770,6 +786,11 @@ temp::Temp *CallExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
     src_->Append(item);
   }
   instr_list.Append(new assem::OperInstr("callq  " + (*fun_name) + "\n", call_decs, src_ ,nullptr));
+
+  if(counter > 6){
+    instr_list.Append(new assem::OperInstr("addq  $" + std::to_string((counter - 6) * 8) + ",%rsp",nullptr,nullptr,nullptr));
+  }
+
   return reg_manager->ReturnValue();
 }
 

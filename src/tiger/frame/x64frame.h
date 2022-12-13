@@ -39,6 +39,11 @@ class X64RegManager : public RegManager {
       this->temp_map_->Enter(regs_[15],new std::string("%r15"));
       this->temp_map_->Enter(regs_[16],new std::string("%rip"));
     }
+
+    temp::Temp* Rdx() override {
+      return regs_[3];
+    }
+
     /**
        * Get general-purpose registers except RSI
        * NOTE: returned temp list should be in the order of calling convention

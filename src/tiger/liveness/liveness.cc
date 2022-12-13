@@ -234,6 +234,41 @@ void LiveGraphFactory::InterfGraph() {
   /* TODO: Put your lab6 code here */
   // construct the interface_graph and take care of move instr
   // after LiveMap , the in_ and out_ have been filled with the variable.
+
+  // precolored register
+  // auto all_regs = reg_manager->AllRegisters();
+  // for(auto reg : all_regs->GetList()){
+  //   if(reg->Int() == 107 || reg->Int() == 116){
+
+  //   } else {
+  //     auto reg_node = this->temp_node_map_->Look(reg);
+
+  //     // printf("t%d  out is :  ",def->Int());
+
+  //     if(reg_node == nullptr){
+  //       reg_node = this->live_graph_.interf_graph->NewNode(reg);
+  //       this->temp_node_map_->Enter(reg,reg_node);
+  //     }
+  //   }
+  // }
+
+  // for(auto reg : all_regs->GetList()){
+  //   if(reg->Int() == 107 || reg->Int() == 116){
+
+  //   } else {
+  //     auto reg_node = this->temp_node_map_->Look(reg);
+
+  //     assert(reg_node);
+  //     for(auto reg_link : all_regs->GetList()){
+  //       if(reg_link->Int() != 107 && reg_link->Int() != 116){
+  //         this->live_graph_.interf_graph->AddEdge(reg_node,this->temp_node_map_->Look(reg_link));
+  //         this->live_graph_.interf_graph->AddEdge(this->temp_node_map_->Look(reg_link),reg_node);
+  //       }
+  //     }
+  //   }
+  // }
+
+
   auto instr_list = this->flowgraph_->Nodes();
 
   for(auto instr : instr_list->GetList()){
@@ -242,7 +277,7 @@ void LiveGraphFactory::InterfGraph() {
     auto def_list = instr->NodeInfo()->Def();
     if(dynamic_cast<assem::OperInstr*>(instr->NodeInfo()) != nullptr){
 
-      // // TODO(wjl) : print
+      // TODO(wjl) : print
       // temp::Map *color = temp::Map::LayerMap(reg_manager->temp_map_, temp::Map::Name());
       // instr->NodeInfo()->Print(stderr,color);
 
