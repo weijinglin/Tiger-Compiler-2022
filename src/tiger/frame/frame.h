@@ -63,6 +63,12 @@ public:
 
   [[nodiscard]] virtual temp::Temp *ReturnValue() = 0;
 
+  [[nodiscard]] virtual temp::TempList* AllRegisters() = 0;
+
+  [[nodiscard]] virtual std::string* getCoreString(int idx) = 0;
+
+  [[nodiscard]] virtual temp::Temp* Rdx() = 0;
+
   temp::Map *temp_map_;
 protected:
   std::vector<temp::Temp *> regs_;
@@ -71,13 +77,47 @@ protected:
 class Access {
 public:
   /* TODO: Put your lab5 code here */
-  
+
+  virtual tree::Exp *ToExp(tree::Exp *framePtr) const = 0;
+
   virtual ~Access() = default;
   
 };
 
 class Frame {
   /* TODO: Put your lab5 code here */
+  
+public:  
+  // all formals used by a function and their location is stored in the Access
+  std::list<frame::Access *> *formals_;
+  // represent for the function label
+  temp::Label* name_;
+  // some instruction used for imple view shift
+  std::list<tree::Stm *> *view_shift;
+  // the size of frame assigned so far
+  int frame_size;
+
+  // 8 is represented for the inital 8 bytes for the return address
+  // other case such as local var and saved register is not determined
+  // this time.
+  // usage : construct a new frame
+  Frame(temp::Label* fun_name,std::list<bool> formals):frame_size(0),name_(fun_name)
+  {
+    // don't need to deal with the formals(because escape analysis)
+    this->formals_ = new std::list<frame::Access *>;
+    this->view_shift = new std::list<tree::Stm*>;
+  }
+
+  Frame() = default;
+
+  virtual frame::Access* allocLocal(bool escape) = 0;
+
+  ~Frame(){ delete this->formals_; }
+
+  std::string GetLabel(){
+    return this->name_->Name();
+  }
+  
 };
 
 /**
@@ -132,6 +172,13 @@ private:
 };
 
 /* TODO: Put your lab5 code here */
+tree::Exp* externalCall(std::string_view s, tree::ExpList *args);
+
+assem::Proc* ProcEntryExit3(frame::Frame *frame, assem::InstrList *body);
+
+tree::Stm* procEntryExit1(frame::Frame *frame, tree::Stm* stm);
+
+assem::InstrList* ProcEntryExit2(assem::InstrList* body);
 
 } // namespace frame
 

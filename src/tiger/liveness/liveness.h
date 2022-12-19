@@ -62,10 +62,12 @@ private:
 
   std::unique_ptr<graph::Table<assem::Instr, temp::TempList>> in_;
   std::unique_ptr<graph::Table<assem::Instr, temp::TempList>> out_;
+  // used for getting core node from the temp (will be used in interfgraph)
   tab::Table<temp::Temp, INode> *temp_node_map_;
 
   void LiveMap();
   void InterfGraph();
+  void DebugPrint();
 };
 
 } // namespace live

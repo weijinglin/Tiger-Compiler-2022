@@ -15,36 +15,50 @@ void Indent(FILE *out, int d) {
 namespace tree {
 
 SeqStm::~SeqStm() {
+  fprintf(stderr,"delete seqop\n");
   delete left_;
   delete right_;
 }
 
 LabelStm::~LabelStm() = default;
 
-JumpStm::~JumpStm() { delete exp_; }
+JumpStm::~JumpStm() { 
+  fprintf(stderr,"delete expop\n");
+  delete exp_;
+}
 
 CjumpStm::~CjumpStm() {
+  fprintf(stderr,"delete cjump\n");
   delete left_;
   delete right_;
 }
 
 MoveStm::~MoveStm() {
+  fprintf(stderr,"delete move\n");
   delete dst_;
   delete src_;
 }
 
-ExpStm::~ExpStm() { delete exp_; }
+ExpStm::~ExpStm() { 
+  fprintf(stderr,"delete expop\n");
+  delete exp_; 
+}
 
 BinopExp::~BinopExp() {
+  fprintf(stderr,"delete binop\n");
   delete left_;
   delete right_;
 }
 
-MemExp::~MemExp() { delete exp_; }
+MemExp::~MemExp() {
+  fprintf(stderr,"delete mem\n"); 
+  delete exp_; 
+}
 
 TempExp::~TempExp() = default;
 
 EseqExp::~EseqExp() {
+  fprintf(stderr,"deletee eseq\n");
   delete stm_;
   delete exp_;
 }
@@ -54,6 +68,7 @@ NameExp::~NameExp() = default;
 ConstExp::~ConstExp() = default;
 
 CallExp::~CallExp() {
+  fprintf(stderr,"call eseq\n");
   delete fun_;
   delete args_;
 }
