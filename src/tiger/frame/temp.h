@@ -25,6 +25,7 @@ class Temp {
 
 public:
   [[nodiscard]] int Int() const;
+  
 
 private:
   int num_;

@@ -482,6 +482,10 @@ void RegAllocator::RewriteProgram()
             continue;
         }
         frame::Access* new_access = frame_->allocLocal(true);
+
+        // TODO(wjl) : lab7 fixed code
+        // new_access->is_pointer
+
         temp_map.insert(std::pair<temp::Temp*,frame::Access*>{v->NodeInfo(),new_access});
     }
     temp::Map *color = temp::Map::LayerMap(reg_manager->temp_map_, temp::Map::Name());

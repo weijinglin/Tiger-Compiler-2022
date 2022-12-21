@@ -338,6 +338,8 @@ tr::ExpAndTy *CallExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                  err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
   // need to push the static link to the first formals
+  // TODO(wjl) : try to add a Label after call exp(the job in lab7)
+
   tree::Exp* fun_name = new tree::NameExp(this->func_);
   tree::ExpList* args = new tree::ExpList();
   env::EnvEntry *fun_entry = venv->Look(this->func_);
@@ -402,7 +404,14 @@ tr::ExpAndTy *CallExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     printf("what ? type of function not match ?\n");
   }
 
+  // // TODO : the modify in lab7
+  // auto last_exp = new tree::SeqStm(
+  //     new tree::ExpStm(new tree::CallExp(fun_name,args)),
+  //     new tree::LabelStm(temp::LabelFactory::NewLabel())
+  // );
+
   return new tr::ExpAndTy(new tr::ExExp(new tree::CallExp(fun_name,args)),last_ty);
+  // return new tr::ExpAndTy(new tr::ExExp((new tr::NxExp(last_exp))->UnEx()),last_ty);
 }
 
 tr::ExpAndTy *OpExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,

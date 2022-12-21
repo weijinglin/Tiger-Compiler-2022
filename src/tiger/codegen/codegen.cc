@@ -787,6 +787,10 @@ temp::Temp *CallExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   }
   instr_list.Append(new assem::OperInstr("callq  " + (*fun_name) + "\n", call_decs, src_ ,nullptr));
 
+  // TODO : lab7 fixed code
+  auto label_ = temp::LabelFactory::NewLabel();
+  instr_list.Append(new assem::LabelInstr(temp::LabelFactory::LabelString(label_),label_));
+
   if(counter > 6){
     instr_list.Append(new assem::OperInstr("addq  $" + std::to_string((counter - 6) * 8) + ",%rsp",nullptr,nullptr,nullptr));
   }
