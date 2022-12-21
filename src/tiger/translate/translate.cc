@@ -961,7 +961,12 @@ tr::ExpAndTy *ForExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   /* TODO: Put your lab5 code here */
   // get the loop variable
   venv->BeginScope();
-  venv->Enter(this->var_,new env::VarEntry(tr::Access::AllocLocal(level,this->escape_),type::IntTy::Instance(),true));
+  // TODO(wjl) : add some code used in lab7 to gen ptrmap
+  auto access_ = tr::Access::AllocLocal(level,this->escape_);
+  // because i in for loop is not a pointer
+  access_->access_->is_pointer = false;
+
+  venv->Enter(this->var_,new env::VarEntry(access_,type::IntTy::Instance(),true));
   env::EnvEntry* iter = venv->Look(this->var_);
   tree::Exp* iter_val = static_cast<env::VarEntry*>(iter)->access_->access_->ToExp(new tree::TempExp(reg_manager->FramePointer()));
 
@@ -1201,6 +1206,9 @@ tr::Exp *FunctionDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     iter_fo++;
 
     for(;iter != fie_list.end();++iter){
+      // TODO(wjl) : may be buggy here(lab7), init ptrmap
+      (*iter_fo)->is_pointer = is_pointer(tenv->Look((*iter)->typ_)->ActualTy());
+
       venv->Enter((*iter)->name_, new env::VarEntry(new tr::Access(all_new_level.at(glo_count),(*iter_fo)),tenv->Look((*iter)->typ_)->ActualTy(),false));
       iter_fo++;
     }
@@ -1243,6 +1251,10 @@ tr::Exp *VarDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     tree::Stm* out_stm = new tree::MoveStm(var_exp, this->init_->Translate(venv,tenv,level,label,errormsg)->exp_->UnEx());
 
     type::Ty* act_ty = tenv->Look(this->typ_)->ActualTy();
+
+    // TODO(wjl) : set is_pointer for generate ptrmap in lab7
+    var_acc->access_->is_pointer = is_pointer(act_ty);
+
     // DONE(wjl) : a bug : using the interface defined by lab4 (fixed)
     venv->Enter(this->var_, new env::VarEntry(var_acc,act_ty,false));
     return new tr::NxExp(out_stm);
@@ -1254,6 +1266,9 @@ tr::Exp *VarDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
 
     // move the output of the function to the core pos(may be stack or register)
     tree::Stm* out_stm = new tree::MoveStm(var_exp, res->exp_->UnEx());
+
+    // TODO(wjl) : set is_pointer for generate ptrmap in lab7
+    var_acc->access_->is_pointer = is_pointer(res->ty_->ActualTy());
 
     venv->Enter(this->var_, new env::VarEntry(var_acc,res->ty_,false));
     return new tr::NxExp(out_stm);

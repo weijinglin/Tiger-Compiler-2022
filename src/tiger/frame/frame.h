@@ -77,6 +77,8 @@ protected:
 class Access {
 public:
   /* TODO: Put your lab5 code here */
+  // TODO(wjl) : code used to generate pointer map
+  bool is_pointer;
 
   virtual tree::Exp *ToExp(tree::Exp *framePtr) const = 0;
 
