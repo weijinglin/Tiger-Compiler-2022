@@ -653,7 +653,7 @@ tr::ExpAndTy *RecordExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     for(auto fie : (static_cast<type::RecordTy*>(tenv->Look(this->typ_)->ActualTy())->fields_->GetList())){
       auto ty_ = fie->ty_;
       // check for pointer
-      if(is_pointer(ty_)){
+      if(is_pointer(ty_->ActualTy())){
         des_word += "1";
       } else {
         des_word += "0";
