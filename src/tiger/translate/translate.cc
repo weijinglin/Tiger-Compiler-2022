@@ -262,7 +262,8 @@ tr::ExpAndTy *FieldVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   }
 
   // construct the offset
-  tree::BinopExp *rec_off = new tree::BinopExp(tree::BinOp::MUL_OP,new tree::ConstExp(counter),new tree::ConstExp(reg_manager->WordSize()));
+  // TODO(wjl) : fix some fetch code because of the modify of lab7
+  tree::BinopExp *rec_off = new tree::BinopExp(tree::BinOp::MUL_OP,new tree::ConstExp(counter + 1),new tree::ConstExp(reg_manager->WordSize()));
   // construct the base
   tree::Exp *base_ = mid_res->exp_->UnEx();
 
@@ -614,10 +615,20 @@ tr::ExpAndTy *OpExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
 
 }
 
+bool is_pointer(type::Ty* ty_){
+  // TODO : here we assume pointer only appear in the case that record or array type
+  if((dynamic_cast<type::RecordTy*>(ty_) != nullptr) && (dynamic_cast<type::ArrayTy*>(ty_) != nullptr)){
+    return true;
+  } else {
+    return false;
+  }
+}
+
 tr::ExpAndTy *RecordExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                    tr::Level *level, temp::Label *label,      
                                    err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  // TODO(wjl) : !!! here try to add description for record and may cause buggy(doing in lab7)
   std::list<absyn::EField*> eFie_list = this->fields_->GetList();
   std::list<tr::ExpAndTy*> *exp_list = new std::list<tr::ExpAndTy*>();
   for(auto efie : eFie_list){
@@ -627,14 +638,36 @@ tr::ExpAndTy *RecordExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   // call the external function
   // first , prepare for the params
   int counter = exp_list->size();
-  tree::ConstExp* _size = new tree::ConstExp(counter * reg_manager->WordSize());
+  // tree::ConstExp* _size = new tree::ConstExp(counter * reg_manager->WordSize());
+  tree::ConstExp* _size = new tree::ConstExp((counter + 1) * reg_manager->WordSize());
 
-  // TODO(wjl) : may be buggy (external call)
   tree::Exp* _call = frame::externalCall("alloc_record",new tree::ExpList({_size}));
 
   // store the Record address and act as the result of this exp
   temp::Temp *res = temp::TempFactory::NewTemp();
   tree::Stm* ini_stm = new tree::MoveStm(new tree::TempExp(res),_call);
+
+  // TODO(wjl) : construct a string to descript this record and store in the zero field(so it causes we need to fix the method we get record's member)
+  std::string des_word = "";
+  if(dynamic_cast<type::RecordTy*>(tenv->Look(this->typ_)->ActualTy()) != nullptr){
+    for(auto fie : (static_cast<type::RecordTy*>(tenv->Look(this->typ_)->ActualTy())->fields_->GetList())){
+      auto ty_ = fie->ty_;
+      // check for pointer
+      if(is_pointer(ty_)){
+        des_word += "1";
+      } else {
+        des_word += "0";
+      }
+    }
+  } else {
+    printf("what wrong in the record type\n");
+  }
+
+  // construct the string exp
+  temp::Label *str_label = temp::LabelFactory::NewLabel();
+  frags->PushBack(new frame::StringFrag(str_label,des_word));
+  auto str_mes = new tr::ExpAndTy(new tr::ExExp(new tree::NameExp(str_label)),type::StringTy::Instance());
+  exp_list->push_front(str_mes);
 
   // do the init job in a loop
   // TODO(wjl) : maybe buggy : too conflict
