@@ -173,6 +173,28 @@ private:
   std::list<Frag*> frags_;
 };
 
+
+// TODO(wjl) : ptrmap defined in lab7
+class ptrMap
+{
+public:
+  /* data */
+  // frame_size
+  int frame_size;
+  // return label
+  temp::Label* ret_label;
+  // map label
+  temp::Label* map_label;
+  // next label
+  temp::Label* next_label;
+  // map message
+  std::string map_mes;
+public:
+  ptrMap(/* args */){}
+  ~ptrMap(){}
+};
+
+
 /* TODO: Put your lab5 code here */
 tree::Exp* externalCall(std::string_view s, tree::ExpList *args);
 
