@@ -26,6 +26,8 @@ class Temp {
 public:
   [[nodiscard]] int Int() const;
   
+  // TODO(wjl) : code added in lab7
+  bool is_pointer;
 
 private:
   int num_;

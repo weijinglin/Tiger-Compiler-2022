@@ -161,7 +161,10 @@ class InRegAccess : public Access {
 public:
   temp::Temp *reg;
 
-  explicit InRegAccess(temp::Temp *reg) : reg(reg) {}
+  explicit InRegAccess(temp::Temp *reg) : reg(reg) {
+    // TODO : code added in lab7
+    reg->is_pointer = this->is_pointer;
+  }
   /* TODO: Put your lab5 code here */
   tree::Exp *ToExp(tree::Exp *framePtr) const override {
     return new tree::TempExp(reg);

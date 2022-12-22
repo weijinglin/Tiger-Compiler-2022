@@ -513,6 +513,10 @@ void RegAllocator::RewriteProgram()
 
                     temp::TempList* src = new temp::TempList();
                     temp::Temp* new_temp = temp::TempFactory::NewTemp();
+
+                    // TODO : code added in lab7
+                    new_temp->is_pointer = new_access->is_pointer;
+                    
                     new_temps->Append(new_temp);
                     src->Append(new_temp);
 
@@ -565,6 +569,10 @@ void RegAllocator::RewriteProgram()
                     // construct the temp
                     temp::TempList* src = new temp::TempList();
                     temp::Temp* new_temp = temp::TempFactory::NewTemp();
+
+                    // TODO : code added in lab7
+                    new_temp->is_pointer = new_access->is_pointer;
+
                     new_temps->Append(new_temp);
                     src->Append(new_temp);
                     // src->Append(def);
