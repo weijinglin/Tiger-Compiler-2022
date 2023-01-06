@@ -5,6 +5,8 @@
 
 extern frame::RegManager *reg_manager;
 
+extern std::vector<frame::ptrMap*> *ptrMaps;
+
 namespace {
 
 constexpr int maxlen = 1024;
@@ -29,6 +31,10 @@ void CodeGen::Codegen() {
   temp::TempList* save_reg = new temp::TempList();
   for(auto reg : save_regs){
     temp::Temp* save_temp = temp::TempFactory::NewTemp();
+
+    // TODO :  add the code used in lab7
+    save_temp->is_pointer = reg->is_pointer;
+
     save_reg->Append(save_temp);
     res->GetInstrList()->Append(new assem::MoveInstr("movq  `s0, `d0", new temp::TempList(save_temp), new temp::TempList(reg)));
   }
@@ -40,6 +46,10 @@ void CodeGen::Codegen() {
   // restore callee saved register
   auto iter = save_reg->GetList().begin();
   for(auto reg : save_regs){
+
+    // TODO :  add the code used in lab7
+    reg->is_pointer = (*iter)->is_pointer;
+
     res->GetInstrList()->Append(new assem::MoveInstr("movq  `s0, `d0", new temp::TempList(reg), new temp::TempList(*iter)));
     iter++;
   }
@@ -173,8 +183,21 @@ void MoveStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
   if(dynamic_cast<tree::TempExp*>(this->dst_) != nullptr){
     // case 1 : store to the register
     if(dynamic_cast<tree::TempExp*>(this->src_) != nullptr){
-      instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n", new temp::TempList(this->dst_->Munch(instr_list,fs)),
-      new temp::TempList(this->src_->Munch(instr_list,fs))));
+      // TODO : code added in lab7
+      temp::Temp* dst_reg = this->dst_->Munch(instr_list,fs);
+      temp::Temp* src_reg = this->src_->Munch(instr_list,fs);
+      // use condition to solve the cover problem
+      // TODO(wjl) : may be buggy here(in pointer analysis)
+      if(dst_reg->is_pointer){
+
+      } else {
+        dst_reg->is_pointer = src_reg->is_pointer;
+      }
+
+      // dst_reg->is_pointer = src_reg->is_pointer;
+
+      instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n", new temp::TempList(dst_reg),
+      new temp::TempList(src_reg)));
       return;
     } else if(dynamic_cast<tree::MemExp*>(this->src_) != nullptr){
       // load from memory
@@ -189,22 +212,50 @@ void MoveStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
         
       // } 
       // test easy case first
+      // TODO : code added in lab7
       temp::Temp* dst = this->dst_->Munch(instr_list,fs);
+      temp::Temp* src_reg = this->src_->Munch(instr_list,fs);
+      // use condition to solve the cover problem
+      // TODO(wjl) : may be buggy here(in pointer analysis)
+      if(dst->is_pointer){
+
+      } else {
+        dst->is_pointer = src_reg->is_pointer;
+      }
+
+      // dst->is_pointer = src_reg->is_pointer;
+
       if(dst == nullptr){
         printf("wrong seg\n");
       }
       instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n", new temp::TempList(dst),
-      new temp::TempList(this->src_->Munch(instr_list,fs))));
+      new temp::TempList(src_reg)));
       return;
     } else if(dynamic_cast<tree::ConstExp*>(this->src_) != nullptr){
       // the case only appear in the above
+      // TODO : code added in lab7
+      temp::Temp* dst = this->dst_->Munch(instr_list,fs);
+      // TODO : we assume the consti can't be used as pointer(may be buggy)
+      dst->is_pointer = 0;
       instr_list.Append(new assem::OperInstr("movq  $" + std::to_string(static_cast<tree::ConstExp*>(this->src_)->consti_)
-       + ",`d0\n", new temp::TempList(this->dst_->Munch(instr_list,fs)),nullptr,nullptr));
+       + ",`d0\n", new temp::TempList(dst),nullptr,nullptr));
       return;
     } else {
       // test easy case first
-      instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n", new temp::TempList(this->dst_->Munch(instr_list,fs)),
-      new temp::TempList(this->src_->Munch(instr_list,fs))));
+      // TODO : code added in lab7
+      temp::Temp* dst = this->dst_->Munch(instr_list,fs);
+      temp::Temp* src_reg = this->src_->Munch(instr_list,fs);
+
+      // TODO(wjl) : may be buggy here(in pointer analysis)
+      if(dst->is_pointer){
+
+      } else {
+        dst->is_pointer = src_reg->is_pointer;
+      }
+      // dst->is_pointer = src_reg->is_pointer;
+
+      instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n", new temp::TempList(dst),
+      new temp::TempList(src_reg)));
       return;
     }
   } else if(dynamic_cast<tree::TempExp*>(this->src_) != nullptr){
@@ -214,8 +265,22 @@ void MoveStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
       // instr_list.Append(new assem::OperInstr("movq  `s0,(`d0)\n",new temp::TempList(static_cast<tree::MemExp*>(this->dst_)->exp_->Munch(instr_list,fs)),
       // new temp::TempList(this->src_->Munch(instr_list,fs)),nullptr));
       // TODO(wjl) : fix for lab6
+
+      // TODO : code added in lab7
+      temp::Temp* dst = static_cast<tree::MemExp*>(this->dst_)->exp_->Munch(instr_list,fs);
+      temp::Temp* src_reg = this->src_->Munch(instr_list,fs);
+
+      // TODO(wjl) : may be buggy here(in pointer analysis)
+      if(dst->is_pointer){
+
+      } else {
+        dst->is_pointer = src_reg->is_pointer;
+      }
+      
+      // dst->is_pointer = src_reg->is_pointer;
+
       instr_list.Append(new assem::OperInstr("movq  `s0,(`s1)\n",nullptr,
-      new temp::TempList({this->src_->Munch(instr_list,fs),static_cast<tree::MemExp*>(this->dst_)->exp_->Munch(instr_list,fs)}),nullptr));
+      new temp::TempList({src_reg,dst}),nullptr));
       return;
     } else {
       // the case of reg to reg has been cared in the first condition branch
@@ -227,8 +292,20 @@ void MoveStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
     // TODO(wjl) : fix for lab6
     // instr_list.Append(new assem::OperInstr("movq  `s0,(`d0)\n",new temp::TempList(static_cast<tree::MemExp*>(this->dst_)->exp_->Munch(instr_list,fs)),
     //   new temp::TempList(this->src_->Munch(instr_list,fs)),nullptr));
+    // TODO : code added in lab7
+    temp::Temp* dst = static_cast<tree::MemExp*>(this->dst_)->exp_->Munch(instr_list,fs);
+    temp::Temp* src_reg = this->src_->Munch(instr_list,fs);
+    // TODO(wjl) : may be buggy here(in pointer analysis)
+    if(dst->is_pointer){
+
+    } else {
+      dst->is_pointer = src_reg->is_pointer;
+    }
+
+    // dst->is_pointer = src_reg->is_pointer;
+
     instr_list.Append(new assem::OperInstr("movq  `s0,(`s1)\n",nullptr,
-      new temp::TempList({this->src_->Munch(instr_list,fs),static_cast<tree::MemExp*>(this->dst_)->exp_->Munch(instr_list,fs)}),nullptr));
+      new temp::TempList({src_reg,dst}),nullptr));
       return;
   }
 }
@@ -258,6 +335,11 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
         temp::Temp* right_reg = this->right_->Munch(instr_list,fs);
         
         temp::Temp* res = temp::TempFactory::NewTemp();
+
+        // TODO : some code added in lab7
+
+
+
         instr_list.Append(new assem::MoveInstr("movq  `s0,`d0\n",new temp::TempList(res),
         new temp::TempList(right_reg)));
 
@@ -785,11 +867,24 @@ temp::Temp *CallExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   for(auto item : args->GetList()){
     src_->Append(item);
   }
-  instr_list.Append(new assem::OperInstr("callq  " + (*fun_name) + "\n", call_decs, src_ ,nullptr));
+
+  auto call_ = new assem::OperInstr("callq  " + (*fun_name) + "\n", call_decs, src_ ,nullptr);
+  instr_list.Append(call_);
 
   // TODO : lab7 fixed code
   auto label_ = temp::LabelFactory::NewLabel();
   instr_list.Append(new assem::LabelInstr(temp::LabelFactory::LabelString(label_),label_));
+
+  // TODO: build the core ptrMap
+  frame::ptrMap* map_ = new frame::ptrMap();
+  // map_->call_instr = call_;
+  map_->num_parm = counter;
+  // NOTE : we can recognize the core instr by this label
+  map_->ret_label = label_;
+
+  ptrMaps->push_back(map_);
+  
+  
 
   if(counter > 6){
     instr_list.Append(new assem::OperInstr("addq  $" + std::to_string((counter - 6) * 8) + ",%rsp",nullptr,nullptr,nullptr));

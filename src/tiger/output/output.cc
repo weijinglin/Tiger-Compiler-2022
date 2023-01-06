@@ -7,6 +7,8 @@
 extern frame::RegManager *reg_manager;
 extern frame::Frags *frags;
 
+std::vector<frame::ptrMap*> *ptrMaps = new std::vector<frame::ptrMap*>();
+
 namespace output {
 void AssemGen::GenAssem(bool need_ra) {
   frame::Frag::OutputPhase phase;
@@ -22,6 +24,40 @@ void AssemGen::GenAssem(bool need_ra) {
   fprintf(out_, ".section .rodata\n");
   for (auto &&frag : frags->GetList())
     frag->OutputAssem(out_, phase, need_ra);
+
+  fprintf(out_,"\n# begin pointerMap\n");
+
+  // TODO : (lab7) : add the code to write the metadata of pointer map
+  // first , write the GLOBAL START
+  if(ptrMaps->size() > 0){
+    std::string init_str = "S0:\n.globl  GLOBAL_GC_ROOTS\n.data\nGLOBAL_GC_ROOTS:\n.quad  " + ptrMaps->at(0)->map_label->Name() + "\n\n";
+    fprintf(out_,init_str.c_str());
+
+    auto iter = ptrMaps->begin();
+    while (true)
+    {
+      /* code */
+      if(iter == ptrMaps->end()){
+        break;
+      }
+      auto prev_iter = iter;
+      iter++;
+
+      std::string label_str = (*prev_iter)->map_label->Name() + ":\n.quad  ";
+      if(iter == ptrMaps->end()){
+        label_str += "0x0\n.quad  " + (*prev_iter)->ret_label->Name()
+        + "\n.data  " + std::to_string((*prev_iter)->frame_size) + "\n.string  "
+        + (*prev_iter)->map_mes + "\n";
+      } else {
+        label_str += (*iter)->map_label->Name() + "\n.quad  " + (*prev_iter)->ret_label->Name()
+        + "\n.data  " + std::to_string((*prev_iter)->frame_size) + "\n.string  "
+        + (*prev_iter)->map_mes + "\n";
+      }
+
+      fprintf(out_,label_str.c_str());
+    }
+    
+  }
 }
 
 } // namespace output

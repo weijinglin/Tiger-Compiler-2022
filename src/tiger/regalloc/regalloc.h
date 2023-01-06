@@ -120,6 +120,11 @@ class RegAllocator {
 
     void DeleteMove();
 
+    // TODO : lab7
+    void genMap();
+
+    bool is_callee_saved(temp::Temp* reg);
+
   public:
     RegAllocator(frame::Frame* frame,std::unique_ptr<cg::AssemInstr> assem_):frame_(frame),assem_instr(std::move(assem_)),result(std::make_unique<ra::Result>())
     {

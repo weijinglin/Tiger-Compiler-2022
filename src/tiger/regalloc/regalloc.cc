@@ -5,6 +5,8 @@
 
 extern frame::RegManager *reg_manager;
 
+extern std::vector<frame::ptrMap*> *ptrMaps;
+
 namespace ra {
 /* TODO: Put your lab6 code here */
 void RegAllocator::RegAlloc(){
@@ -43,9 +45,161 @@ void RegAllocator::RegAlloc(){
                 continue;
             result->coloring_->Enter(node->NodeInfo(),reg_manager->getCoreString(color.at(node)));
         }
+
+        // TODO(wjl) : lab7 logic , when all instruction has been generate
+        // here : some pre_condition : 1, all temp will be assign to a machine register
+        //                             2, all stack slot have been determined
+        //                             3, just need to init per frame 
+        genMap();
         return;
     }
 
+}
+
+// TODO : judge for the reg in x64frame
+bool RegAllocator::is_callee_saved(temp::Temp* reg){
+    std::string* buf = this->result->coloring_->Look(reg);
+    if(buf->compare("%rbx") == 0){
+        return true;
+    }
+    else if(buf->compare("%rbp") == 0){
+        return true;
+    }
+    else if(buf->compare("%r12") == 0){
+        return true;
+    }
+    else if(buf->compare("%r13") == 0){
+        return true;
+    }
+    else if(buf->compare("%r14") == 0){
+        return true;
+    }
+    else if(buf->compare("%r15") == 0){
+        return true;
+    }
+    else {
+        return false;
+    }
+}   
+
+void RegAllocator::genMap()
+{
+    auto instrs = this->result->il_;
+    auto color_map = this->result->coloring_;
+    auto iter = instrs->GetList().begin();
+
+    while (iter != instrs->GetList().end())
+    {
+        /* code */
+        if(dynamic_cast<assem::OperInstr*>(*iter) != nullptr){
+            if(static_cast<assem::OperInstr*>(*iter)->assem_.find("callq") != std::string::npos){
+                assem::InstrList store_code;
+                
+                printf("a call exp\n");
+
+                // contain the live reg in the call instr
+                auto live_in = this->live_graph_factory->getLiveIn(*iter);
+
+                iter++;
+                if(dynamic_cast<assem::LabelInstr*>(*iter) != nullptr){
+                    auto label_ = static_cast<assem::LabelInstr*>(*iter)->label_;
+                    printf("after call label is %s\n",label_->Name().c_str());
+                    // get the matched label in the preMaps
+                    for(auto map : *ptrMaps){
+                        // debug code
+                        if(map->ret_label == label_){
+                            
+                            printf("map hit\n");
+                            // do some check first
+                            if(map->map_label){
+                                printf("what ? hit twice in label set\n");
+                            }
+
+                            // hit
+                            // update frame size
+                            if(map->num_parm > 6){
+                                // 8 is represent fot return address
+                                map->frame_size = this->frame_->frame_size + 8 + (map->num_parm - 6) * 8;
+                            } else {
+                                map->frame_size = this->frame_->frame_size + 8;
+                            }
+
+                            // update map_mes
+                            map->map_mes = "";
+                            // first , just consider the stack slot in the frame->formals
+                            for(auto stack_slot : *(this->frame_->formals_)){
+                                if(stack_slot->is_pointer){
+                                    map->map_mes += std::to_string(static_cast<frame::InFrameAccess*>(stack_slot)->offset);
+                                    map->map_mes += "/";
+                                }
+                            }
+
+                            // second , consider the cases that a call which param is more than 6
+                            // TODO(wjl) : consider after
+
+                            // third , consider the callee saved register
+                            // thinking : judge a reg is pointer or not and is true push it to the stack and rewrite the program
+                            // and this method will cause the frame_size to change
+                            // TODO : generate the new code here
+                            int grow_size_frame = 0;
+                            for(auto reg : live_in->GetList()){
+                                printf("live reg is t%d\n",reg->Int());
+                                // is callee saved or not
+                                if(reg->is_pointer == true){
+                                    if(is_callee_saved(reg)){
+                                        // TODO(wjl) : push the reg to the stack
+                                        // so we need to fix code and update the frame_size and fix core instr
+                                        // and the frame_size is handled by hand
+                                        store_code.Append(new assem::OperInstr("\nmovq  " + (*this->result->coloring_->Look(reg))
+                                         + "," + std::to_string(grow_size_frame) + "(%rsp)",nullptr,nullptr,nullptr));
+                                        map->map_mes += std::to_string(map->frame_size);
+                                        map->map_mes += "/";
+                                        grow_size_frame++;
+                                        map->frame_size += 8;
+                                    }
+                                }
+                            }
+
+                            if(grow_size_frame == 0){
+
+                            } else {
+                                // TODO : generate stack adj code
+                                assem::Instr* comment = new assem::OperInstr("# need adjust stack for GC",nullptr,nullptr,nullptr);
+                                assem::Instr* sub_instr = new assem::OperInstr("subq  $" + std::to_string(grow_size_frame * 8) + ",%rsp",
+                                nullptr,nullptr,nullptr);
+                                assem::Instr* add_instr = new assem::OperInstr("addq  $" + std::to_string(grow_size_frame * 8) + ",%rsp",
+                                nullptr,nullptr,nullptr);
+                                
+                                iter--;
+                                auto insert_pos = iter;
+                                iter++;
+                                // insert the stack minus
+                                instrs->Insert(insert_pos,comment);
+                                instrs->Insert(insert_pos,sub_instr);
+                                for(auto instr : store_code.GetList()){
+                                    instrs->Insert(insert_pos,instr);
+                                }
+
+                                insert_pos++;
+                                insert_pos++;
+                                instrs->Insert(insert_pos,add_instr);
+
+                                // clear the list
+                                
+                            }
+
+                            // TODO : gen a map_label for this map
+                            map->map_label = temp::LabelFactory::NewLabel();
+                        }
+                    }
+                } else {
+                    printf("wrong in call , not a label after a call\n");
+                }
+            }
+        }
+        iter++;
+    }
+    
 }
 
 void RegAllocator::DeleteMove()
@@ -483,8 +637,11 @@ void RegAllocator::RewriteProgram()
         }
         frame::Access* new_access = frame_->allocLocal(true);
 
+        // TODO(wjl) : code added in lab7 , put this access variable in the frame;
+        this->frame_->formals_->push_back(new_access);
+
         // TODO(wjl) : lab7 fixed code
-        // new_access->is_pointer
+        new_access->is_pointer = v->NodeInfo()->is_pointer;
 
         temp_map.insert(std::pair<temp::Temp*,frame::Access*>{v->NodeInfo(),new_access});
     }

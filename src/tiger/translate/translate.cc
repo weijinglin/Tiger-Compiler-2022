@@ -626,7 +626,7 @@ tr::ExpAndTy *OpExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
 
 bool is_pointer(type::Ty* ty_){
   // TODO : here we assume pointer only appear in the case that record or array type
-  if((dynamic_cast<type::RecordTy*>(ty_) != nullptr) && (dynamic_cast<type::ArrayTy*>(ty_) != nullptr)){
+  if((dynamic_cast<type::RecordTy*>(ty_) != nullptr) || (dynamic_cast<type::ArrayTy*>(ty_) != nullptr)){
     return true;
   } else {
     return false;
@@ -654,6 +654,7 @@ tr::ExpAndTy *RecordExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
 
   // store the Record address and act as the result of this exp
   temp::Temp *res = temp::TempFactory::NewTemp();
+  res->is_pointer = true;
   tree::Stm* ini_stm = new tree::MoveStm(new tree::TempExp(res),_call);
 
   // TODO(wjl) : construct a string to descript this record and store in the zero field(so it causes we need to fix the method we get record's member)
@@ -1133,9 +1134,11 @@ tr::ExpAndTy *ArrayExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   tree::Exp* _init = this->init_->Translate(venv,tenv,level,label,errormsg)->exp_->UnEx();
 
   tree::Exp* _call = frame::externalCall("init_array",new tree::ExpList({_size,_init}));
+  
 
   // build the Temp to store the last return value
   temp::Temp *ans = temp::TempFactory::NewTemp();
+  ans->is_pointer = true;
   // TODO(wjl) : may be buggy ! can be replaced bt toExp() (because it doesn't store in register actually)
   // TODO(wjl) : unnecessary , because the variable has been allocated in the assign exp
   tree::Stm* move_stm = new tree::MoveStm(new tree::TempExp(ans),_call);
@@ -1278,6 +1281,8 @@ tr::Exp *VarDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
 
     // TODO(wjl) : set is_pointer for generate ptrmap in lab7
     var_acc->access_->is_pointer = is_pointer(res->ty_->ActualTy());
+
+    printf("define the %s and is_pointer is %d\n",this->var_->Name().c_str(),var_acc->access_->is_pointer);
 
     venv->Enter(this->var_, new env::VarEntry(var_acc,res->ty_,false));
     return new tr::NxExp(out_stm);

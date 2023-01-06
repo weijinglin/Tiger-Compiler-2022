@@ -56,6 +56,9 @@ public:
   LiveGraph GetLiveGraph() { return live_graph_; }
   tab::Table<temp::Temp, INode> *GetTempNodeMap() { return temp_node_map_; }
 
+  // TODO : code added in lab7
+  temp::TempList* getLiveIn(assem::Instr* instr);
+
 private:
   fg::FGraphPtr flowgraph_;
   LiveGraph live_graph_;

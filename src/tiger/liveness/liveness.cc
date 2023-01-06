@@ -341,6 +341,19 @@ void LiveGraphFactory::InterfGraph() {
 
 }
 
+temp::TempList* LiveGraphFactory::getLiveIn(assem::Instr* instr)
+{
+  for(auto node : this->flowgraph_->Nodes()->GetList()){
+    if(node->NodeInfo() == instr){
+      return this->in_.get()->Look(node);
+    }
+  }
+
+  printf("wrong  !!! not find core node in getLiveIn\n");
+  return nullptr;
+
+}
+
 void LiveGraphFactory::Liveness() {
   LiveMap();
   InterfGraph();

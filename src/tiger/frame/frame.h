@@ -189,6 +189,10 @@ public:
   temp::Label* next_label;
   // map message
   std::string map_mes;
+  // core call exp(used to recognize between codegen and regalloc)
+  // assem::Instr* call_instr;
+  // params num
+  int num_parm;
 public:
   ptrMap(/* args */){}
   ~ptrMap(){}
