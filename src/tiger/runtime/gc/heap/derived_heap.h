@@ -175,17 +175,14 @@ class DerivedHeap : public TigerHeap {
     // use first 5 char to recognize
     char **buf = (char**)(*root);
     char* dep_word = (*buf) + 4;
-    // TODO : test code
-    printf("can reach here\n");
-    printf("address is %d\n",dep_word);
+    // TODO : do recognizing
     if(dep_word[0] != 'r'){
-      printf("normal return\n");
       return;
     }
-    printf("can reach here\n");
     std::string dep_str = dep_word;
     printf("first field has %s\n",dep_str.c_str());
 
+    
   }
 
   // TODO : define some useful struct

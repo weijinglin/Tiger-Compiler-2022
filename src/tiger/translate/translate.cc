@@ -289,7 +289,11 @@ tr::ExpAndTy *SubscriptVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   e = new tr::ExExp(mid_res->exp_->UnEx());
 
   tree::Exp* arr_fir = e->exp_;
-  tree::BinopExp* arr_off = new tree::BinopExp(tree::BinOp::MUL_OP, sub_res->exp_->UnEx(), new tree::ConstExp(reg_manager->WordSize()));
+  
+  // TODO : code fixed in lab7
+  tree::Exp* _counter = sub_res->exp_->UnEx();
+  _counter = new tree::BinopExp(tree::PLUS_OP,_counter,new tree::ConstExp(1));
+  tree::BinopExp* arr_off = new tree::BinopExp(tree::BinOp::MUL_OP, _counter, new tree::ConstExp(reg_manager->WordSize()));
   tree::MemExp* last_res = new tree::MemExp(new tree::BinopExp(
     tree::BinOp::PLUS_OP,arr_fir,arr_off
   ));
@@ -1131,6 +1135,9 @@ tr::ExpAndTy *ArrayExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   /* TODO: Put your lab5 code here */
   // prepare for malloc size
   tree::Exp* _size = this->size_->Translate(venv,tenv,level,label,errormsg)->exp_->UnEx();
+  // TODO : code added in lab7 for description word in lab7
+  _size = new tree::BinopExp(tree::PLUS_OP,_size,new tree::ConstExp(1));
+
   tree::Exp* _init = this->init_->Translate(venv,tenv,level,label,errormsg)->exp_->UnEx();
 
   tree::Exp* _call = frame::externalCall("init_array",new tree::ExpList({_size,_init}));
@@ -1143,10 +1150,20 @@ tr::ExpAndTy *ArrayExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   // TODO(wjl) : unnecessary , because the variable has been allocated in the assign exp
   tree::Stm* move_stm = new tree::MoveStm(new tree::TempExp(ans),_call);
 
+  // TODO(wjl) : code fixed in lab7
+  // word frame
+  std::string dep_word = "array";
+  // construct the string exp
+  temp::Label *str_label = temp::LabelFactory::NewLabel();
+  frags->PushBack(new frame::StringFrag(str_label,dep_word));
+
+  tree::Stm* word_init = new tree::MoveStm(new tree::MemExp(new tree::TempExp(ans)),new tree::NameExp(str_label));
+  tree::SeqStm* last_stm = new tree::SeqStm(move_stm,word_init);
+
   // TODO(wjl) : array type or one primitive type
   type::Ty* res_ty = tenv->Look(this->typ_)->ActualTy();
 
-  return new tr::ExpAndTy(new tr::ExExp(new tree::EseqExp(move_stm,new tree::TempExp(ans))),res_ty);
+  return new tr::ExpAndTy(new tr::ExExp(new tree::EseqExp(last_stm,new tree::TempExp(ans))),res_ty);
 }
 
 tr::ExpAndTy *VoidExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
