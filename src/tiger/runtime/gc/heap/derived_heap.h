@@ -200,6 +200,7 @@ class DerivedHeap : public TigerHeap {
       // printf("the address of array is %ld and val is %ld\n",(*ptr_var),(*val_ptr));
     }
 
+
     // move up and find the up stack
     while (true)
     {
@@ -243,15 +244,45 @@ class DerivedHeap : public TigerHeap {
       }
     }
 
+    printf("try to clean\n");
+
     Clean();
   }
 
+  void DeleteAllocate(std::vector<allocated_block> freed_block){
+    std::vector<allocated_block> new_al;
+    for(auto block : this->al_list){
+      bool is_freed = false;
+      for(auto find_block : freed_block){
+        if(find_block.start_pos == block.start_pos){
+          is_freed = true;
+          break;
+        }
+      }
+
+      if(is_freed){
+
+      } else {
+        new_al.push_back(block);
+      }
+    }
+
+    this->al_list = new_al;
+  }
+
   void Clean(){
+    std::vector<allocated_block> freed_block;
+    printf("the size of al_list is %u\n",this->al_list.size());
     for(auto block : this->al_list){
       if(block.is_mark == false){
         AddFree(block.start_pos,block.end_pos);
+        freed_block.push_back(block);
+      } else {
+        block.is_mark = false;
       }
     }
+
+    DeleteAllocate(freed_block);
   }
 
   void AddFree(int start_pos,int end_pos){
