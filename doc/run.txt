@@ -1,0 +1,4 @@
+lab6:
+gcc -Wl,--wrap,getchar -m64 "../testdata/lab7/testcases/bigger_tree.tig.s" "../src/tiger/runtime/runtime.c" -o test.out
+lab7:
+g++ -g -Wl,--wrap,getchar -m64 "../testdata/lab7/testcases/bigger_tree.tig.s" "../src/tiger/runtime/runtime.cc" "../src/tiger/runtime/gc/heap/derived_heap.cc" -o test.out

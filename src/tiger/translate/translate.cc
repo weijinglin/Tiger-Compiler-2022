@@ -658,7 +658,7 @@ tr::ExpAndTy *RecordExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   tree::Stm* ini_stm = new tree::MoveStm(new tree::TempExp(res),_call);
 
   // TODO(wjl) : construct a string to descript this record and store in the zero field(so it causes we need to fix the method we get record's member)
-  std::string des_word = "";
+  std::string des_word = "record:";
   if(dynamic_cast<type::RecordTy*>(tenv->Look(this->typ_)->ActualTy()) != nullptr){
     for(auto fie : (static_cast<type::RecordTy*>(tenv->Look(this->typ_)->ActualTy())->fields_->GetList())){
       auto ty_ = fie->ty_;

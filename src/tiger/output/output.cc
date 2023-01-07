@@ -46,12 +46,12 @@ void AssemGen::GenAssem(bool need_ra) {
       std::string label_str = (*prev_iter)->map_label->Name() + ":\n.quad  ";
       if(iter == ptrMaps->end()){
         label_str += "0x0\n.quad  " + (*prev_iter)->ret_label->Name()
-        + "\n.data  " + std::to_string((*prev_iter)->frame_size) + "\n.string  "
-        + (*prev_iter)->map_mes + "\n";
+        + "\n.quad  " + std::to_string((*prev_iter)->frame_size) + "\n.string  \""
+        + (*prev_iter)->map_mes + "\"\n";
       } else {
         label_str += (*iter)->map_label->Name() + "\n.quad  " + (*prev_iter)->ret_label->Name()
-        + "\n.data  " + std::to_string((*prev_iter)->frame_size) + "\n.string  "
-        + (*prev_iter)->map_mes + "\n";
+        + "\n.quad  " + std::to_string((*prev_iter)->frame_size) + "\n.string  \""
+        + (*prev_iter)->map_mes + "\"\n";
       }
 
       fprintf(out_,label_str.c_str());
