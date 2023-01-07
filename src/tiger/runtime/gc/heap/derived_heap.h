@@ -14,6 +14,22 @@ namespace gc {
 class DerivedHeap : public TigerHeap {
   // TODO(lab7): You need to implement those interfaces inherited from TigerHeap correctly according to your design.
   public:
+
+  struct free_block
+  {
+    /* data */
+    int start_pos;
+    int end_pos;
+  };
+
+  struct allocated_block
+  {
+    /* data */
+    int start_pos;
+    int end_pos;
+    bool is_mark;
+  };
+
   /**
    * Allocate a contiguous space from heap.
    * If your heap has enough space, just allocate and return.
@@ -30,23 +46,36 @@ class DerivedHeap : public TigerHeap {
       }
       int block_size = (*iter).end_pos - (*iter).start_pos + 1;
       if(block_size > size){
+        allocated_block new_al_block;
+        new_al_block.start_pos = (*iter).start_pos;
+        new_al_block.end_pos = new_al_block.start_pos + size - 1;
+        new_al_block.is_mark = false;
+        this->al_list.push_back(new_al_block);
+
         // update the free_list
         (*iter).start_pos += size;
 
         return this->heap + (*iter).start_pos;
       }
       else if(block_size == size){
+        allocated_block new_al_block;
+        new_al_block.start_pos = (*iter).start_pos;
+        new_al_block.end_pos = new_al_block.start_pos + size - 1;
+        new_al_block.is_mark = false;
+        this->al_list.push_back(new_al_block);
+
         // delete this block
-        std::vector<free_block> free_copy;
-        for(auto a_block : this->free_list){
-          if(a_block.start_pos == (*iter).start_pos){
+        // std::vector<free_block> free_copy;
+        // for(auto a_block : this->free_list){
+        //   if(a_block.start_pos == (*iter).start_pos){
 
-          } else {
-            free_copy.push_back(a_block);
-          }
-        }
+        //   } else {
+        //     free_copy.push_back(a_block);
+        //   }
+        // }
 
-        this->free_list = free_copy;
+        // this->free_list = free_copy;
+        DeleteFree(*iter);
 
         return this->heap + (*iter).start_pos;
       }
@@ -57,6 +86,20 @@ class DerivedHeap : public TigerHeap {
     // do some trick to prove my code
     // return new char[size];
     return nullptr;
+  }
+
+  void DeleteFree(free_block block){
+    // delete this block
+    std::vector<free_block> free_copy;
+    for(auto a_block : this->free_list){
+      if(a_block.start_pos == block.start_pos){
+
+      } else {
+        free_copy.push_back(a_block);
+      }
+    }
+
+    this->free_list = free_copy;
   }
 
   /**
@@ -143,9 +186,9 @@ class DerivedHeap : public TigerHeap {
 
     auto rbp = rsp + frame_size / 8;
 
-    std::istringstream iss(mes);	// 输入流
-    std::string token;			// 接收缓冲区
-    while (std::getline(iss, token, '/'))	// 以split为分隔符
+    std::istringstream iss(mes);
+    std::string token;
+    while (std::getline(iss, token, '/'))
     {
       int offset = str2Int(token);
       printf("parse the token is %d\n",offset);
@@ -157,14 +200,91 @@ class DerivedHeap : public TigerHeap {
       // printf("the address of array is %ld and val is %ld\n",(*ptr_var),(*val_ptr));
     }
 
+    // move up and find the up stack
+    while (true)
+    {
+      /* code */
+      rsp = rbp;
+      uint64_t fir_ret = *rsp;
+      std::string mes = "";
+      uint64_t frame_size = 0;
 
+      bool is_hit = false;
+
+      // find core ptrMap
+      for(auto map : all_map){
+        if(map.ret_label == fir_ret){
+          frame_size = map.frame_size;
+          mes += map.map_mes;
+          is_hit = true;
+          break;
+        }
+      }
+
+      // the upmost function's RA is not recorded in ptrMap
+      if(!is_hit){
+        break;
+      }
+
+      auto rbp = rsp + frame_size / 8;
+
+      std::istringstream iss(mes);
+      std::string token;
+      while (std::getline(iss, token, '/'))
+      {
+        int offset = str2Int(token);
+        printf("parse the token is %d\n",offset);
+        
+        // TODO(wjl) : here is some code test for the reading from the stack
+        auto ptr_var = (uint64_t*)(rbp - (uint64_t)offset / 8);
+        DFS(ptr_var);
+        // auto val_ptr = (uint64_t*)(*ptr_var);
+        // printf("the address of array is %ld and val is %ld\n",(*ptr_var),(*val_ptr));
+      }
+    }
+
+    Clean();
+  }
+
+  void Clean(){
+    for(auto block : this->al_list){
+      if(block.is_mark == false){
+        AddFree(block.start_pos,block.end_pos);
+      }
+    }
+  }
+
+  void AddFree(int start_pos,int end_pos){
+    int most_start = start_pos;
+    int most_end = end_pos;
+    // find which free_block's end_pos = start_pos
+    for(auto block : this->free_list){
+      if(block.end_pos == start_pos){
+        most_start = block.start_pos;
+        DeleteFree(block);
+        break;
+      }
+    }
+
+    // find which free_block's start_pos = end_pos
+    for(auto block : this->free_list){
+      if(block.start_pos == end_pos){
+        most_end = block.end_pos;
+        DeleteFree(block);
+        break;
+      }
+    }
+
+    free_block new_free;
+    new_free.start_pos = most_start;
+    new_free.end_pos = most_end;
+    this->free_list.push_back(new_free);
   }
 
   int str2Int(std::string token){
-    std::stringstream stream;     //声明一个stringstream变量
+    std::stringstream stream; 
     int n;
-    //string转int
-    stream << token;     //向stream中插入字符串"1234"
+    stream << token; 
     stream >> n; 
     return n;
   }
@@ -175,6 +295,26 @@ class DerivedHeap : public TigerHeap {
     // use first 5 char to recognize
     char **buf = (char**)(*root);
     char* dep_word = (*buf) + 4;
+
+    // do mark
+    auto iter = this->al_list.begin();
+    while(true){
+      if(iter == this->al_list.end()){
+        printf("computer err in mark\n");
+        break;
+      }
+      if((*iter).start_pos + this->heap == (char*)(*root)){
+        if((*iter).is_mark == true){
+          // have been marked
+          return;
+        }
+        (*iter).is_mark = true;
+        break;
+      }
+
+      iter++;
+    }
+
     // TODO : do recognizing
     if(dep_word[0] != 'r'){
       return;
@@ -182,7 +322,15 @@ class DerivedHeap : public TigerHeap {
     std::string dep_str = dep_word;
     printf("first field has %s\n",dep_str.c_str());
 
-    
+    // pass the record test
+    int str_size = dep_str.size();
+    int loop_time = str_size - 7;
+    for(int i = 0;i < loop_time;++i){
+      if(dep_str.at(i + 7) == '1'){
+        uint64_t* new_root = (uint64_t*)(root + i + 1);
+        DFS(new_root);
+      }
+    }
   }
 
   // TODO : define some useful struct
@@ -194,17 +342,11 @@ class DerivedHeap : public TigerHeap {
 
   // used to find Root in stack
   gc::Roots roots;
-
-  struct free_block
-  {
-    /* data */
-    int start_pos;
-    int end_pos;
-  };
-
+  
   // free list that store the free block
   std::vector<free_block> free_list;
-  
+  std::vector<allocated_block> al_list;
+    
 };
 
 } // namespace gc
