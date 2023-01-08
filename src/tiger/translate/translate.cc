@@ -1299,7 +1299,7 @@ tr::Exp *VarDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     // TODO(wjl) : set is_pointer for generate ptrmap in lab7
     var_acc->access_->is_pointer = is_pointer(res->ty_->ActualTy());
 
-    printf("define the %s and is_pointer is %d\n",this->var_->Name().c_str(),var_acc->access_->is_pointer);
+    // printf("define the %s and is_pointer is %d\n",this->var_->Name().c_str(),var_acc->access_->is_pointer);
 
     venv->Enter(this->var_, new env::VarEntry(var_acc,res->ty_,false));
     return new tr::NxExp(out_stm);
