@@ -46,7 +46,7 @@ class Roots {
         char* buf = (char*)(size_ptr + 1);
         new_map.map_mes = buf;
 
-        printf("in root genMaps test for map_mes is %s\n",buf);
+        // printf("in root genMaps test for map_mes is %s\n",buf);
 
         this->maps.push_back(new_map);
 

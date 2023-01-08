@@ -191,10 +191,12 @@ class DerivedHeap : public TigerHeap {
     while (std::getline(iss, token, '/'))
     {
       int offset = str2Int(token);
-      printf("parse the token is %d\n",offset);
+      // printf("parse the token is %d\n",offset);
       
       // TODO(wjl) : here is some code test for the reading from the stack
       auto ptr_var = (uint64_t*)(rbp - (uint64_t)offset / 8);
+      // auto val_ptr = (uint64_t*)(*ptr_var);
+      // printf("the address of array is %ld and val is %ld\n",(*ptr_var),(*val_ptr));
       DFS(ptr_var);
       // auto val_ptr = (uint64_t*)(*ptr_var);
       // printf("the address of array is %ld and val is %ld\n",(*ptr_var),(*val_ptr));
@@ -205,6 +207,7 @@ class DerivedHeap : public TigerHeap {
     while (true)
     {
       /* code */
+      // printf("rsp and rbp is %lu and %lu\n",rsp,rbp);
       rsp = rbp;
       uint64_t fir_ret = *rsp;
       std::string mes = "";
@@ -227,24 +230,28 @@ class DerivedHeap : public TigerHeap {
         break;
       }
 
-      auto rbp = rsp + frame_size / 8;
+      rbp = rsp + frame_size / 8;
 
       std::istringstream iss(mes);
       std::string token;
       while (std::getline(iss, token, '/'))
       {
         int offset = str2Int(token);
-        printf("parse the token is %d\n",offset);
+        // printf("parse the token is %d here\n",offset);
         
         // TODO(wjl) : here is some code test for the reading from the stack
         auto ptr_var = (uint64_t*)(rbp - (uint64_t)offset / 8);
+        auto val_ptr = (uint64_t*)(*ptr_var);
+        // printf("the address of array is %ld and val is %ld\n",(*ptr_var),(*val_ptr));
+        // printf("the address of array is %ld\n",(*ptr_var));
+  
         DFS(ptr_var);
         // auto val_ptr = (uint64_t*)(*ptr_var);
         // printf("the address of array is %ld and val is %ld\n",(*ptr_var),(*val_ptr));
       }
     }
 
-    printf("try to clean\n");
+    // printf("try to clean\n");
 
     Clean();
   }
@@ -272,14 +279,19 @@ class DerivedHeap : public TigerHeap {
 
   void Clean(){
     std::vector<allocated_block> freed_block;
-    printf("the size of al_list is %u\n",this->al_list.size());
-    for(auto block : this->al_list){
-      if(block.is_mark == false){
-        AddFree(block.start_pos,block.end_pos);
-        freed_block.push_back(block);
-      } else {
-        block.is_mark = false;
+    // printf("the size of al_list is %u\n",this->al_list.size());
+    auto iter = this->al_list.begin();
+    while(true){
+      if(iter == this->al_list.end()){
+        break;
       }
+      if((*iter).is_mark == false){
+        AddFree((*iter).start_pos,(*iter).end_pos);
+        freed_block.push_back((*iter));
+      } else {
+        (*iter).is_mark = false;
+      }
+      iter++;
     }
 
     DeleteAllocate(freed_block);
@@ -324,6 +336,10 @@ class DerivedHeap : public TigerHeap {
     // do mark job in the root
     // check is a array or record(use different strategy)
     // use first 5 char to recognize
+    if((char*)(*root) < this->heap || (char*)(*root) > this->heap + this->heap_size - 1){
+      // printf("field root is %lu\n",(*root));
+      return;
+    }
     char **buf = (char**)(*root);
     char* dep_word = (*buf) + 4;
 
@@ -331,7 +347,10 @@ class DerivedHeap : public TigerHeap {
     auto iter = this->al_list.begin();
     while(true){
       if(iter == this->al_list.end()){
-        printf("computer err in mark\n");
+        // printf("root is %ld\n",root);
+        // long long offset = (char*)(root) - this->heap;
+        // printf("offset is %ld\n",offset);
+        // printf("computer err in mark\n");
         break;
       }
       if((*iter).start_pos + this->heap == (char*)(*root)){
@@ -348,17 +367,21 @@ class DerivedHeap : public TigerHeap {
 
     // TODO : do recognizing
     if(dep_word[0] != 'r'){
+      // printf("it is a array");
       return;
     }
     std::string dep_str = dep_word;
-    printf("first field has %s\n",dep_str.c_str());
+    // printf("first field has %s\n",dep_str.c_str());
 
     // pass the record test
     int str_size = dep_str.size();
     int loop_time = str_size - 7;
+    // printf("loop time is %d\n",loop_time);
     for(int i = 0;i < loop_time;++i){
       if(dep_str.at(i + 7) == '1'){
-        uint64_t* new_root = (uint64_t*)(root + i + 1);
+        uint64_t* new_root = ((uint64_t*)(*root) + i + 1);
+        // printf("ptr of root and new_root is %lu and %lu\n",root,new_root);
+        // printf("value of new_root and heap is %lu and %lu\n",*new_root,this->heap);
         DFS(new_root);
       }
     }

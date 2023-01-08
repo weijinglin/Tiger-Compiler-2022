@@ -151,7 +151,7 @@ void RegAllocator::genMap()
                                         // so we need to fix code and update the frame_size and fix core instr
                                         // and the frame_size is handled by hand
                                         store_code.Append(new assem::OperInstr("\nmovq  " + (*this->result->coloring_->Look(reg))
-                                         + "," + std::to_string(grow_size_frame) + "(%rsp)",nullptr,nullptr,nullptr));
+                                         + "," + std::to_string(grow_size_frame * 8) + "(%rsp)",nullptr,nullptr,nullptr));
                                         map->map_mes += std::to_string(map->frame_size);
                                         map->map_mes += "/";
                                         grow_size_frame++;
