@@ -11,6 +11,7 @@ parse.cc
 # CMake build directories
 build/
 cmake-build-debug/
+Debug/
 
 # CMake
 CMakeLists.txt.user
